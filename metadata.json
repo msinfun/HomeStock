@@ -1,0 +1,7 @@
+{
+  "name": "老管家先生",
+  "description": "An AI-powered household inventory management application that helps you track items, scan receipts/products, and automatically manage shopping lists and expiry alerts.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

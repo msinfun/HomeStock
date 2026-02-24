@@ -1,0 +1,10 @@
+
+/* Fix layout shift caused by scrollbar appearing/disappearing */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Prevent iOS auto-zoom on focus by ensuring input font size is 16px */
+input, select, textarea {
+  font-size: 16px !important;
+}
