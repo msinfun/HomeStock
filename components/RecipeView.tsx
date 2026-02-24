@@ -28,24 +28,53 @@ const normalizeForMatch = (text: string) => {
     .toLowerCase();
 };
 
+// ==========================================
+// 核心升級：支援分數、c.c. 與黑名單機制的縮放引擎
+// ==========================================
 const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') => {
   if (factor === 1 || !text) return text;
 
-  const allowedUnits = [
-    'g', 'ml', 'kg', 'l', 'tsp', 'tbsp', 'oz', 'lb', 'cup', 'cc',
-    '公克', '毫升', '克', '公斤', '升', '茶匙', '湯匙', '杯', '碗',
-    '顆', '個', '條', '片', '只', '台斤', '兩', '把', '瓣', '包', '罐', '瓶'
-  ].join('|');
+  // 匹配：數字(可含小數點或分數斜線) + 選擇性空白 + 緊接的文字單位(可含點，如 c.c.)
+  const regex = /(\d+(?:[\.\/]\d+)?)(\s*)([a-zA-Z\u4e00-\u9fa5°%\.]*)/gi;
 
-  const regex = new RegExp(`(\\d+(?:\\.\\d+)?)\\s*(${allowedUnits})(?![a-zA-Z\\u4e00-\u9fa5])`, 'gi');
+  return text.replace(regex, (match, num, space, unit, offset, fullText) => {
+    const nextChar = fullText.charAt(offset + match.length);
 
-  return text.replace(regex, (match, num, unit) => {
-    const val = parseFloat(num);
+    // 防禦機制 1：排除步驟標號
+    // 如果緊接著標點符號，且沒有單位，視為編號 (如 "1. " 或 "2、")
+    if (['.', '。', '、', ')', '）'].includes(nextChar) && unit.trim() === '') return match;
+
+    // 句首且無單位的純數字，通常是列表編號
+    if (offset === 0 && unit.trim() === '') return match;
+
+    // 排除帶有特定前綴的數字 (如 "步驟2", "第1次")
+    const prevText = fullText.substring(Math.max(0, offset - 3), offset);
+    if (/(第|步|驟)/.test(prevText)) return match;
+
+    // 防禦機制 2：黑名單制度 (加入 °c, °f 防止溫度被放大)
+    const lowerUnit = unit.toLowerCase().trim();
+    const isBlacklisted = /(度|分|時|秒|hr|min|sec|瓦|w|檔|速|cm|公分|吋|寸|人份|天|%|^c$|^f$|°c|°f)/.test(lowerUnit);
+    if (isBlacklisted) return match;
+
+    // 執行縮放 (處理分數與小數)
+    let val = 0;
+    if (num.includes('/')) {
+      const parts = num.split('/');
+      const numerator = parseFloat(parts[0]);
+      const denominator = parseFloat(parts[1]);
+      if (denominator === 0 || isNaN(numerator) || isNaN(denominator)) return match;
+      val = numerator / denominator;
+    } else {
+      val = parseFloat(num);
+    }
+
     if (isNaN(val)) return match;
-    const scaled = Math.round(val * factor);
 
-    if (format === 'arrow') return `${match} ➝ ${scaled}${unit}`;
-    return `${scaled}${unit}`;
+    // 四捨五入到小數第一位，避免浮點數破圖 (如變成 0.300000004)
+    let scaled = Math.round((val * factor) * 10) / 10;
+
+    if (format === 'arrow') return `${match} ➝ ${scaled}${space}${unit}`;
+    return `${scaled}${space}${unit}`;
   });
 };
 
@@ -60,15 +89,19 @@ const RecipeCard: React.FC<{
   onEdit: () => void;
   onDeleteRequest: () => void;
   onAddToShopping: (name: string) => void;
-}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping }) => {
+  onUpdate: (recipe: Recipe) => void;
+}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping, onUpdate }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [ingredientsExpanded, setIngredientsExpanded] = useState(true);
-  const [stepsExpanded, setStepsExpanded] = useState(true);
-  const [notesExpanded, setNotesExpanded] = useState(true);
-  const [isEstimating, setIsEstimating] = useState(false);
-  const [estimationResult, setEstimationResult] = useState<CostNutritionResult | null>(null);
-  const [localPriceOverrides, setLocalPriceOverrides] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState<'ingredients' | 'steps' | 'review'>('ingredients');
+  const [costBreakdownExpanded, setCostBreakdownExpanded] = useState(false);
 
+  // Focused Cooking Mode State
+  const [isCookingMode, setIsCookingMode] = useState(false);
+  const [cookingStepIndex, setCookingStepIndex] = useState(0);
+
+  const [isEstimating, setIsEstimating] = useState(false);
+  const [estimationResult, setEstimationResult] = useState<CostNutritionResult | null>((recipe as any).cachedEstimation || null);
+  const [localPriceOverrides, setLocalPriceOverrides] = useState<Record<string, number>>({});
   const [scaleFactor, setScaleFactor] = useState(1);
 
   const [priceEditModal, setPriceEditModal] = useState<{
@@ -76,6 +109,8 @@ const RecipeCard: React.FC<{
     ingredientName: string;
     currentCost: string;
   }>({ isOpen: false, ingredientName: '', currentCost: '' });
+
+  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isAlert: false, onConfirm: () => { } });
 
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
@@ -118,9 +153,9 @@ const RecipeCard: React.FC<{
     try {
       const result = await estimateRecipeCostAndNutrition(recipe, inventoryItems || []);
       setEstimationResult(result);
+      onUpdate({ ...recipe, cachedEstimation: result } as Recipe);
     } catch (error) {
       console.error("估算失敗:", error);
-      // 如果 AI 伺服器塞車或報錯，跳出我們漂亮的彈窗提示
       setModalConfig({
         isOpen: true,
         title: 'AI 伺服器忙碌中',
@@ -129,7 +164,6 @@ const RecipeCard: React.FC<{
         onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
       });
     } finally {
-      // 確保不管成功還是失敗，按鈕都會停止「轉圈圈」
       setIsEstimating(false);
     }
   };
@@ -218,6 +252,67 @@ const RecipeCard: React.FC<{
     }));
   }, [safeIngredients, scaleFactor]);
 
+  // 沉浸式烹飪模式視圖
+  if (isCookingMode) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-slate-900 text-white flex flex-col animate-in slide-in-from-bottom duration-300">
+        <div className="pt-14 pb-4 px-6 flex justify-between items-center border-b border-white/10">
+          <button onClick={() => setIsCookingMode(false)} className="text-rose-400 font-bold text-sm bg-rose-400/10 px-4 py-2 rounded-full active:scale-95 transition-all">
+            結束
+          </button>
+          <span className="font-black tracking-widest text-xs opacity-50 uppercase">沉浸烹飪模式</span>
+          <div className="w-[60px]"></div>
+        </div>
+
+        <div className="px-8 pt-8">
+          <h2 className="text-xl font-black text-white/80 mb-6 truncate text-center">{recipe.name}</h2>
+          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-[#007AFF] transition-all duration-500 ease-out"
+              style={{ width: `${formattedSteps.length > 0 ? ((cookingStepIndex + 1) / formattedSteps.length) * 100 : 100}%` }}
+            ></div>
+          </div>
+          <p className="text-center mt-3 text-sm font-bold text-[#007AFF]">
+            步驟 {cookingStepIndex + 1} <span className="text-white/30">/ {formattedSteps.length || 1}</span>
+          </p>
+        </div>
+
+        <div className="flex-1 px-8 flex items-center justify-center overflow-y-auto">
+          {formattedSteps.length > 0 ? (
+            <p className="text-[28px] sm:text-3xl font-black leading-snug tracking-tight text-center text-white/90">
+              {formattedSteps[cookingStepIndex]}
+            </p>
+          ) : (
+            <p className="text-xl font-bold text-white/50">無步驟資料</p>
+          )}
+        </div>
+
+        <div className="pb-12 pt-6 px-6 flex gap-4">
+          <button
+            disabled={cookingStepIndex === 0}
+            onClick={() => setCookingStepIndex(prev => prev - 1)}
+            className="flex-1 py-5 rounded-full bg-white/10 font-black tracking-widest disabled:opacity-30 active:scale-95 transition-all text-[15px]"
+          >
+            上一階段
+          </button>
+          <button
+            onClick={() => {
+              if (cookingStepIndex < formattedSteps.length - 1) {
+                setCookingStepIndex(prev => prev + 1);
+              } else {
+                setIsCookingMode(false);
+              }
+            }}
+            className="flex-[1.5] py-5 rounded-full bg-[#007AFF] font-black tracking-widest shadow-[0_8px_20px_rgba(0,122,255,0.4)] active:scale-95 transition-all text-[15px]"
+          >
+            {cookingStepIndex < formattedSteps.length - 1 ? '完成，下一步' : '完成料理！'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Review 模式 (心得簡化卡片)
   if (viewMode === 'review') {
     return (
       <div
@@ -226,8 +321,7 @@ const RecipeCard: React.FC<{
           if (isBatchMode) onToggleSelection(recipe.id);
           else onEdit();
         }}
-        className={`bg-white/80 backdrop-blur-md p-5 transition-all relative rounded-[28px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)] ${isSelected && isBatchMode ? 'bg-white' : 'hover:bg-white'
-          }`}
+        className={`bg-white/70 backdrop-blur-md p-5 transition-all relative rounded-[28px] border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] ${isSelected && isBatchMode ? 'bg-white' : 'hover:bg-white/90'}`}
       >
         {isBatchMode && (
           <div className="absolute top-5 left-4 z-10">
@@ -256,7 +350,7 @@ const RecipeCard: React.FC<{
   }
 
   return (
-    <div className="relative overflow-hidden group rounded-[28px]">
+    <div className="relative overflow-hidden group rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 bg-white/70 backdrop-blur-md">
       {!isBatchMode && (
         <div
           className={`absolute inset-0 bg-[#FF3B30] flex justify-end items-center px-6 z-0 rounded-[28px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
@@ -275,7 +369,7 @@ const RecipeCard: React.FC<{
       )}
 
       <div
-        className={`bg-white/80 backdrop-blur-xl transition-all duration-300 relative z-10 ${isOpen || isSelected ? 'bg-white' : 'hover:bg-white'} p-5 rounded-[28px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)]`}
+        className={`bg-white/80 transition-all duration-300 relative z-10 ${isOpen || isSelected ? 'bg-white' : 'hover:bg-white/90'} p-5 rounded-[28px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.02)]`}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -295,7 +389,8 @@ const RecipeCard: React.FC<{
         )}
 
         <div className={`${isBatchMode ? 'pl-8' : ''}`}>
-          <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight mb-2.5">
+          {/* 修改點：標題統一改為 17px 並加上 break-all */}
+          <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight mb-2.5 break-all">
             {recipe.name}
           </h3>
 
@@ -320,11 +415,31 @@ const RecipeCard: React.FC<{
         {isOpen && !isBatchMode && (
           <div className="mt-5 mb-2 space-y-4 animate-in slide-in-from-top-2 duration-300 cursor-default" onClick={(e) => e.stopPropagation()}>
 
-            {/* 份量調整區塊：玻璃卡片 */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-[24px] p-4 border border-white shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-wrap items-center justify-between gap-3">
+            <div className="flex bg-slate-100/80 p-1 rounded-full border border-white/80 shadow-inner">
+              <button
+                onClick={() => setActiveTab('ingredients')}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'ingredients' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                備料與成本
+              </button>
+              <button
+                onClick={() => setActiveTab('steps')}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'steps' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                做法
+              </button>
+              <button
+                onClick={() => setActiveTab('review')}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'review' ? 'bg-white text-[#007AFF] shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                心得
+              </button>
+            </div>
+
+            <div className="bg-slate-50/80 backdrop-blur-sm rounded-[24px] p-4 border border-white shadow-sm flex flex-wrap items-center justify-between gap-3">
               <span className="text-[13px] font-black tracking-wider text-slate-600 whitespace-nowrap flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#007AFF]"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" /><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" /><path d="M12 2v2" /><path d="M12 22v-2" /><path d="m17 17-1.4-1.4" /><path d="m4.9 4.9 1.4 1.4" /><path d="m19.1 4.9-1.4 1.4" /><path d="m4.9 19.1 1.4-1.4" /></svg>
-                份量調整
+                配方份量
               </span>
               <div className="flex items-center gap-2">
                 {[0.5, 1.0, 2.0].map(val => (
@@ -357,192 +472,139 @@ const RecipeCard: React.FC<{
               </div>
             </div>
 
-            {/* 估算按鈕 */}
-            <div className="flex justify-end items-center mb-2">
-              <button
-                onClick={handleEstimate}
-                disabled={isEstimating}
-                className="flex items-center gap-1.5 bg-white border border-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-[#007AFF] px-5 py-2.5 rounded-full text-xs font-black tracking-widest hover:bg-blue-50 transition-all active:scale-95"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                {isEstimating ? '重新估算中...' : '估算成本與營養'}
-              </button>
-            </div>
+            <div className="min-h-[200px] animate-in fade-in duration-300">
 
-            {/* AI 思考中的骨架屏 (Skeleton Loading) - 大幅降低等待焦慮 */}
-            {isEstimating && (
-              <div className="bg-white/70 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.04)] animate-pulse">
-                <div className="flex gap-4 mb-6">
-                  <div className="flex-1 bg-slate-200/50 rounded-[24px] h-24"></div>
-                  <div className="flex-1 bg-slate-200/50 rounded-[24px] h-24"></div>
-                </div>
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="bg-slate-200/50 rounded-[20px] h-16"></div>
-                  <div className="bg-slate-200/50 rounded-[20px] h-16"></div>
-                  <div className="bg-slate-200/50 rounded-[20px] h-16"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-4 bg-slate-200/50 rounded-full w-1/3 mb-4"></div>
-                  <div className="h-10 bg-slate-200/50 rounded-2xl w-full"></div>
-                  <div className="h-10 bg-slate-200/50 rounded-2xl w-full"></div>
-                </div>
-              </div>
-            )}
-
-            {/* Apple Health 風格的全新結果卡片 */}
-            {finalEstimation && !isEstimating && (
-              <div className="bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[32px] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.06)] animate-in slide-in-from-top-4 duration-500">
-
-                {/* 頂部兩大指標：成本與熱量 */}
-                <div className="flex gap-3 mb-5">
-                  <div className="flex-1 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-[24px] p-4.5 border border-white shadow-sm flex flex-col justify-between">
-                    <span className="text-[11px] font-black text-emerald-600 tracking-widest uppercase flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                      預估總成本
-                    </span>
-                    <div className="flex items-baseline gap-0.5 text-emerald-700 mt-2 drop-shadow-sm">
-                      <span className="text-lg font-bold">$</span>
-                      <span className="text-4xl font-black tracking-tighter leading-none">{Math.round(finalEstimation.totalCost)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-[24px] p-4.5 border border-white shadow-sm flex flex-col justify-between">
-                    <span className="text-[11px] font-black text-orange-600 tracking-widest uppercase flex items-center gap-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9" /><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" /><circle cx="12" cy="12" r="2" /><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5" /><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19" /></svg>
-                      總熱量
-                    </span>
-                    <div className="flex items-baseline gap-1 text-orange-700 mt-2 drop-shadow-sm">
-                      <span className="text-4xl font-black tracking-tighter leading-none">{finalEstimation.nutrition.calories}</span>
-                      <span className="text-xs font-bold text-orange-500">kcal</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 三大營養素：果凍方塊 */}
-                <div className="grid grid-cols-3 gap-3 mb-6">
-                  <div className="bg-blue-50/80 rounded-[20px] p-3 text-center border border-white shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-                    <span className="block text-[11px] text-blue-500 font-black tracking-widest mb-0.5">蛋白質</span>
-                    <span className="text-lg font-black text-blue-700 tracking-tight">{finalEstimation.nutrition.protein}g</span>
-                  </div>
-                  <div className="bg-purple-50/80 rounded-[20px] p-3 text-center border border-white shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-                    <span className="block text-[11px] text-purple-500 font-black tracking-widest mb-0.5">碳水</span>
-                    <span className="text-lg font-black text-purple-700 tracking-tight">{finalEstimation.nutrition.carbs}g</span>
-                  </div>
-                  <div className="bg-amber-50/80 rounded-[20px] p-3 text-center border border-white shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-                    <span className="block text-[11px] text-amber-500 font-black tracking-widest mb-0.5">脂肪</span>
-                    <span className="text-lg font-black text-amber-700 tracking-tight">{finalEstimation.nutrition.fat}g</span>
-                  </div>
-                </div>
-
-                {/* 成本明細清單：白色膠囊式 */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-end mb-3 px-1">
-                    <p className="text-[11px] text-slate-400 tracking-widest font-black uppercase">成本明細 (可點擊修改)</p>
-                    <span className="text-[11px] text-slate-400 font-bold">總重: {finalEstimation.totalWeight}g</span>
-                  </div>
-
-                  {finalEstimation.ingredients.map((ing, idx) => (
+              {/* --- 頁籤一：備料與成本 --- */}
+              {activeTab === 'ingredients' && (
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[13px] font-black tracking-wide text-slate-800">營養與成本估算</span>
                     <button
-                      key={idx}
-                      onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }}
-                      className="w-full flex justify-between items-center bg-white border border-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.02)] px-4 py-3 rounded-[20px] active:scale-[0.98] transition-all hover:border-[#007AFF]/30 group"
+                      onClick={handleEstimate}
+                      disabled={isEstimating}
+                      className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[11px] font-black tracking-widest transition-all active:scale-95 ${estimationResult && !isEstimating ? 'bg-white border border-white text-[#007AFF] shadow-sm' : 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)]'}`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2.5 h-2.5 rounded-full shadow-sm ${ing.source === 'inventory' ? 'bg-emerald-400 shadow-emerald-400/50' : 'bg-slate-300'}`}></div>
-                        <div className="text-left">
-                          <span className="text-[15px] text-slate-700 font-black tracking-wide block leading-tight">{ing.name}</span>
-                          <span className="text-[11px] text-slate-400 font-bold">{ing.amount}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[17px] font-black tracking-tight ${ing.isOverridden ? 'text-orange-500' : (ing.source === 'inventory' ? 'text-emerald-600' : 'text-slate-500')}`}>
-                          ${Math.round(ing.finalCost)}
-                        </span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 group-hover:text-[#007AFF] transition-colors"><path d="m9 18 6-6-6-6" /></svg>
-                      </div>
+                      {isEstimating ? '估算中...' : estimationResult ? '重新估算' : 'AI 智能估算'}
                     </button>
-                  ))}
-                </div>
-                <p className="text-[10px] font-bold text-slate-400 mt-5 text-center bg-slate-50 py-2 rounded-full">* 定錨基準：頂級超市/有機商店價格</p>
-              </div>
-            )}
+                  </div>
 
-            <div className="border border-white/80 rounded-[24px] overflow-hidden flex flex-col bg-white/50 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <button
-                type="button"
-                onClick={() => setIngredientsExpanded(!ingredientsExpanded)}
-                className="w-full bg-white/60 px-5 py-4 flex justify-between items-center text-[15px] font-black tracking-wide text-slate-800 shrink-0 border-b border-white/60 transition-colors hover:bg-white"
-              >
-                <span>食材準備區</span>
-                <span className="text-[11px] font-bold text-slate-400">{ingredientsExpanded ? '點擊收合' : '點擊展開'}</span>
-              </button>
-              {ingredientsExpanded && (
-                <div className="p-4 space-y-2 animate-in fade-in duration-200 max-h-56 overflow-y-auto custom-scrollbar overscroll-contain">
-                  {scaledIngredientList.map((ingItem, idx) => {
-                    const status = getStockStatus(ingItem.original);
-                    const isAvailable = status.found && status.quantity > 0;
-                    const isInCart = shoppingList?.some(item => item.name.trim().toLowerCase() === ingItem.original.trim().toLowerCase());
+                  {isEstimating && (
+                    <div className="bg-white/70 backdrop-blur-2xl border border-white/80 rounded-[28px] p-5 shadow-sm animate-pulse">
+                      <div className="flex gap-4 mb-4"><div className="flex-1 bg-slate-200/50 rounded-[20px] h-20"></div><div className="flex-1 bg-slate-200/50 rounded-[20px] h-20"></div></div>
+                      <div className="h-6 bg-slate-200/50 rounded-full w-full"></div>
+                    </div>
+                  )}
 
-                    return (
-                      <div key={idx} className="flex justify-between text-sm border-b border-white/60 last:border-none pb-2.5 last:pb-0 items-center">
-                        <div className="flex-1 mr-3 min-w-0">
-                          <span className={`font-black tracking-wide block truncate ${isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{ingItem.display}</span>
-                          {status.found ? (
-                            <span className={`text-[11px] font-black tracking-widest mt-0.5 block ${status.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>庫存: {status.quantity}</span>
-                          ) : (
-                            <span className="text-[10px] font-black tracking-widest mt-0.5 inline-block text-slate-400 bg-slate-100/80 px-2 py-0.5 rounded-full border border-white">無紀錄</span>
-                          )}
+                  {finalEstimation && !isEstimating && (
+                    <div className="bg-white/80 backdrop-blur-2xl border border-white/80 rounded-[28px] p-5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+                      <div className="flex gap-3 mb-4">
+                        <div className="flex-1 bg-gradient-to-br from-emerald-50 to-emerald-100/50 rounded-[20px] p-4 border border-white flex flex-col justify-between">
+                          <span className="text-[10px] font-black text-emerald-600 tracking-widest uppercase">總成本</span>
+                          <div className="flex items-baseline gap-0.5 text-emerald-700 mt-1"><span className="text-sm font-bold">$</span><span className="text-3xl font-black leading-none">{Math.round(finalEstimation.totalCost)}</span></div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); if (!isInCart) onAddToShopping(ingItem.original); }}
-                          disabled={isInCart}
-                          className={`p-2.5 rounded-full transition-all shrink-0 border ${isInCart ? 'bg-slate-100 text-slate-400 border-transparent cursor-default' : 'bg-white border-white text-[#007AFF] hover:bg-blue-50 active:scale-90 shadow-sm'}`}
-                        >
-                          {isInCart ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>}
-                        </button>
+                        <div className="flex-1 bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-[20px] p-4 border border-white flex flex-col justify-between">
+                          <span className="text-[10px] font-black text-orange-600 tracking-widest uppercase">總熱量</span>
+                          <div className="flex items-baseline gap-1 text-orange-700 mt-1"><span className="text-3xl font-black leading-none">{finalEstimation.nutrition.calories}</span><span className="text-[10px] font-bold">kcal</span></div>
+                        </div>
                       </div>
-                    );
-                  })}
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="bg-blue-50/80 rounded-[16px] py-2 text-center border border-white"><span className="block text-[10px] text-blue-500 font-black tracking-widest">蛋白</span><span className="text-[15px] font-black text-blue-700">{finalEstimation.nutrition.protein}g</span></div>
+                        <div className="bg-purple-50/80 rounded-[16px] py-2 text-center border border-white"><span className="block text-[10px] text-purple-500 font-black tracking-widest">碳水</span><span className="text-[15px] font-black text-purple-700">{finalEstimation.nutrition.carbs}g</span></div>
+                        <div className="bg-amber-50/80 rounded-[16px] py-2 text-center border border-white"><span className="block text-[10px] text-amber-500 font-black tracking-widest">脂肪</span><span className="text-[15px] font-black text-amber-700">{finalEstimation.nutrition.fat}g</span></div>
+                      </div>
+
+                      <div className="border border-white/80 rounded-[20px] bg-slate-50/50 overflow-hidden">
+                        <button
+                          onClick={() => setCostBreakdownExpanded(!costBreakdownExpanded)}
+                          className="w-full px-4 py-3 flex justify-between items-center text-[13px] font-black text-slate-600 hover:bg-white transition-colors"
+                        >
+                          <span>查看預估成本明細</span>
+                          <svg className={`w-4 h-4 transition-transform ${costBreakdownExpanded ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                        </button>
+                        {costBreakdownExpanded && (
+                          <div className="px-3 pb-3 pt-1 space-y-1.5 animate-in slide-in-from-top-2">
+                            {finalEstimation.ingredients.map((ing, idx) => (
+                              <button key={idx} onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }} className="w-full flex justify-between items-center bg-white px-3 py-2.5 rounded-[16px] active:scale-[0.98] transition-all border border-transparent hover:border-[#007AFF]/30 group">
+                                <div className="text-left flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${ing.source === 'inventory' ? 'bg-emerald-400' : 'bg-slate-300'}`}></div>
+                                  <span className="text-[14px] text-slate-700 font-black">{ing.name} <span className="text-[10px] text-slate-400 font-bold ml-1">{ing.amount}</span></span>
+                                </div>
+                                <span className={`text-[15px] font-black ${ing.isOverridden ? 'text-orange-500' : (ing.source === 'inventory' ? 'text-emerald-600' : 'text-slate-500')}`}>${Math.round(ing.finalCost)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-white/50 backdrop-blur-md rounded-[28px] border border-white/80 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                    <h4 className="text-[13px] font-black tracking-wide text-slate-800 mb-4 px-1">食材清單</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+                      {scaledIngredientList.map((ingItem, idx) => {
+                        const status = getStockStatus(ingItem.original);
+                        const isAvailable = status.found && status.quantity > 0;
+                        const isInCart = shoppingList?.some(item => item.name.trim().toLowerCase() === ingItem.original.trim().toLowerCase());
+
+                        return (
+                          <div key={idx} className="flex justify-between items-center group">
+                            <div className="flex-1 mr-3 min-w-0">
+                              {/* 修改點：字體降級到 14px，移除 truncate 改用 break-words，讓長文字自然換行 */}
+                              <span className={`text-[14px] font-black tracking-wide block break-words leading-relaxed ${isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{ingItem.display}</span>
+                              {status.found ? (
+                                <span className={`text-[10px] font-black tracking-widest block mt-0.5 ${status.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>庫存: {status.quantity}</span>
+                              ) : (
+                                <span className="text-[9px] font-black tracking-widest mt-0.5 inline-block text-slate-400 bg-slate-100/80 px-2 py-0.5 rounded-full">無紀錄</span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); if (!isInCart) onAddToShopping(ingItem.original); }}
+                              disabled={isInCart}
+                              className={`p-2.5 rounded-full transition-all shrink-0 border ${isInCart ? 'bg-slate-100 text-slate-400 border-transparent cursor-default' : 'bg-white border-white text-[#007AFF] hover:bg-blue-50 active:scale-90 shadow-sm'}`}
+                            >
+                              {isInCart ? <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg> : <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               )}
-            </div>
 
-            <div className="border border-white/80 rounded-[24px] overflow-hidden flex flex-col bg-white/50 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <button
-                type="button"
-                onClick={() => setStepsExpanded(!stepsExpanded)}
-                className="w-full bg-blue-50/50 px-5 py-4 flex justify-between items-center text-[15px] font-black tracking-wide text-[#007AFF] shrink-0 border-b border-blue-50 transition-colors hover:bg-blue-50/80"
-              >
-                <span>料理做法區</span>
-                <span className="text-[11px] font-bold text-blue-400">{stepsExpanded ? '點擊收合' : '點擊展開'}</span>
-              </button>
-              {stepsExpanded && (
-                <div className="p-4 animate-in fade-in duration-200 max-h-80 overflow-y-auto custom-scrollbar overscroll-contain">
-                  <ol className="list-decimal list-outside pl-5 space-y-3.5">
+              {/* --- 頁籤二：做法與沉浸模式 --- */}
+              {activeTab === 'steps' && (
+                <div className="bg-white/50 backdrop-blur-md rounded-[28px] border border-white/80 p-5 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex flex-col h-full">
+
+                  <button
+                    onClick={() => { setCookingStepIndex(0); setIsCookingMode(true); }}
+                    className="w-full bg-[#007AFF] text-white py-4 rounded-full font-black tracking-widest shadow-[0_8px_20px_rgba(0,122,255,0.3)] mb-6 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                    開始烹飪 (沉浸模式)
+                  </button>
+
+                  <ol className="list-decimal list-outside pl-5 space-y-4">
+                    {/* 修改點：作法清單的字體同步降到 14px */}
                     {formattedSteps.length > 0 ? formattedSteps.map((step, idx) => (
-                      <li key={idx} className="text-[15px] font-bold text-slate-700 leading-relaxed pl-1 marker:text-[#007AFF] marker:font-black">{step}</li>
+                      <li key={idx} className="text-[14px] font-bold text-slate-700 leading-relaxed pl-1 marker:text-[#007AFF] marker:font-black pb-2 border-b border-white/60 last:border-0">{step}</li>
                     )) : <li className="text-sm font-bold text-slate-400 italic">暫無步驟資料</li>}
                   </ol>
                 </div>
               )}
-            </div>
 
-            <div className="border border-white/80 rounded-[24px] overflow-hidden flex flex-col bg-white/50 backdrop-blur-md shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-              <button
-                type="button"
-                onClick={() => setNotesExpanded(!notesExpanded)}
-                className="w-full bg-white/60 px-5 py-4 flex justify-between items-center text-[15px] font-black tracking-wide text-slate-800 shrink-0 border-b border-white/60 transition-colors hover:bg-white"
-              >
-                <span>料理心得</span>
-                <span className="text-[11px] font-bold text-slate-400">{notesExpanded ? '點擊收合' : '點擊展開'}</span>
-              </button>
-              {notesExpanded && (
-                <div className="p-5 animate-in fade-in duration-200 text-[15px] font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
-                  {recipe.review || <span className="text-slate-400 italic font-normal">尚無心得，點擊編輯新增...</span>}
+              {/* --- 頁籤三：心得 --- */}
+              {activeTab === 'review' && (
+                <div className="bg-white/50 backdrop-blur-md rounded-[28px] border border-white/80 p-6 shadow-[0_2px_8px_rgba(0,0,0,0.02)] min-h-[150px]">
+                  <p className="text-[15px] font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
+                    {recipe.review || <span className="text-slate-400 italic font-normal">尚無心得紀錄，點擊下方編輯按鈕來新增你的第一筆料理心得吧！</span>}
+                  </p>
                 </div>
               )}
+
             </div>
+
           </div>
         )}
 
@@ -575,6 +637,14 @@ const RecipeCard: React.FC<{
         inputType="number"
         onConfirm={confirmPriceEdit}
         onCancel={() => setPriceEditModal({ ...priceEditModal, isOpen: false })}
+      />
+
+      <ConfirmationModal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
@@ -705,7 +775,6 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
   return (
     <div className="-mt-6 space-y-0 pb-24">
-      {/* iOS 26 頂部搜尋列 (無縫對齊) */}
       <div className="sticky top-0 bg-white/70 backdrop-blur-2xl z-30 border-b border-white/60 -mx-4 px-4 h-16 flex items-center gap-3">
         <div className="relative flex-1 h-11 group">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
@@ -716,7 +785,6 @@ const RecipeView: React.FC<RecipeViewProps> = ({
             {selectedTags.size > 0 && !isFilterOpen && <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#FF3B30] rounded-full border-2 border-white"></span>}
           </button>
 
-          {/* 標籤篩選 Modal */}
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
@@ -779,7 +847,6 @@ const RecipeView: React.FC<RecipeViewProps> = ({
         </button>
       </div>
 
-      {/* 這裡已經移除了 px-4，讓卡片能夠完美與總覽等寬 */}
       <div className="h-4 w-full shrink-0"></div>
       <div className="pb-20">
         {filteredRecipes.length === 0 ? (
@@ -789,8 +856,8 @@ const RecipeView: React.FC<RecipeViewProps> = ({
           </div>
         ) : (
           filteredRecipes.map(recipe => (
-            <div key={recipe.id} className="mb-4 rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 overflow-hidden bg-white/70 backdrop-blur-md">
-              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} />
+            <div key={recipe.id} className="mb-4">
+              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} />
             </div>
           ))
         )}
