@@ -45,15 +45,26 @@ const InventoryItemCard: React.FC<{
   onAddToShopping: (name: string, category: string) => void;
   onUpdate: (item: InventoryItem) => void;
   onConsumeRequest: (item: GroupedInventoryItem) => void;
-}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest }) => {
+  isActiveSwipe?: boolean;
+  onSwipeStart?: () => void;
+}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, isActiveSwipe, onSwipeStart }) => {
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
   const threshold = 70;
 
+  // 監聽外部狀態，自動縮回
+  useEffect(() => {
+    if (!isActiveSwipe) {
+      setOffsetX(0);
+      setSwipedOpen(false);
+    }
+  }, [isActiveSwipe]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isBatchMode) return;
     startX.current = e.touches[0].clientX;
+    onSwipeStart?.();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -114,12 +125,12 @@ const InventoryItemCard: React.FC<{
 
   const isInShoppingList = shoppingList.some(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
 
+  // 🍎 Review Mode: 去除重複外框，直接使用與一般模式相同的內層樣式
   if (viewMode === 'review') {
     return (
       <div
         onClick={(e) => { e.stopPropagation(); onEdit(item.subItems[0]); }}
-        // 🍎 內部卡片：移除高光，乾淨的白板
-        className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-5 cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-[24px]"
+        className="transition-all duration-300 relative z-10 cursor-pointer hover:bg-white/30 p-5 h-full"
       >
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-[17px] font-black tracking-tight text-slate-800">{item.name}</h3>
@@ -420,6 +431,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
   }, [viewMode]);
 
   const [expandedItemIds, setExpandedItemIds] = useState<Set<string>>(new Set());
+  const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
   const [quickAdjust, setQuickAdjust] = useState<QuickAdjust | null>(null);
   const [customDelta, setCustomDelta] = useState<string>('');
 
@@ -714,15 +726,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
   };
 
   const requestDelete = (id: string) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: '確認刪除',
-      message: '確定要刪除此物品嗎？此操作無法復原。',
-      onConfirm: () => {
-        props.onDelete(id);
-        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    // 移除重複的彈窗，直接交給外層 (App.tsx) 的詳細彈窗處理
+    props.onDelete(id);
   };
 
   return (
@@ -915,6 +920,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                 onAddToShopping={props.onAddToShopping}
                 onUpdate={props.onUpdate}
                 onConsumeRequest={requestConsume}
+                isActiveSwipe={activeSwipeId === item.id}
+                onSwipeStart={() => setActiveSwipeId(item.id)}
               />
             </div>
           ))
@@ -981,8 +988,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       )}
 
       {isFilterMenuOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsFilterMenuOpen(false)}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/40 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsFilterMenuOpen(false)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/40 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-white/40 shrink-0 bg-white/50">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
               <button onClick={() => setIsFilterMenuOpen(false)} className="p-2.5 bg-white/90 border border-white shadow-sm rounded-full text-slate-500 hover:bg-white active:scale-95 transition-all">

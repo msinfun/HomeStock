@@ -23,7 +23,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const [batchQueue, setBatchQueue] = useState<any[]>([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
 
-  // Modal State for Skipping Last Item or Alerts
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -41,7 +40,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     onCancel: () => { }
   });
 
-  // Ensure initial category is valid
   const defaultCategory = categories.length > 0 ? categories[0] : '食品';
 
   const [form, setForm] = useState<Omit<InventoryItem, 'id'>>({
@@ -63,7 +61,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
 
   const isEditing = !!(initialData && initialData.id);
 
-  // Compute AI Context: Extract unique values from existing data
   const aiContext = useMemo(() => {
     const distinctCategories = Array.from(new Set([...categories, ...existingItems.map(i => i.category)]));
     const distinctSubCategories = Array.from(new Set(existingItems.map(i => i.subCategory).filter(Boolean) as string[]));
@@ -147,8 +144,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const handleNameBlur = async () => {
     if (!form.name || isEditing || batchQueue.length > 0) return;
     const normalizedName = form.name.trim().toLowerCase();
-
-    // PRIORITY: Check Local History First
     const historyMatch = existingItems.find(i => i.name.trim().toLowerCase() === normalizedName);
 
     if (historyMatch) {
@@ -348,7 +343,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           {isEditing ? '編輯物品' : (batchQueue.length > 0 ? '批次新增確認' : '新增物品')}
         </h2>
         {batchQueue.length > 0 && (
-          // 🍎 扁平化膠囊
           <span className="bg-slate-100 text-[#007AFF] px-3.5 py-1 rounded-full text-[11px] font-black tracking-widest">
             進度：{currentBatchIndex + 1} / {batchQueue.length}
           </span>
@@ -525,11 +519,11 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
+        {/* 日期區塊：強制同一行，並打破 iOS 原生寬度限制與塌陷問題 */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 mb-1 px-1 flex-wrap">
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">有效期限</label>
-              {/* 🍎 扁平小按鈕 */}
               <button
                 type="button"
                 disabled={isExpiryAiLoading}
@@ -549,15 +543,14 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             </div>
             <input
               type="date"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[17px]"
+              className="w-full min-w-0 appearance-none px-3 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[15px]"
               value={form.expiryDate}
               onChange={e => setForm({ ...form, expiryDate: e.target.value })}
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 min-w-0">
             <div className="flex justify-between items-center mb-1 px-1">
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">開封日期</label>
-              {/* 🍎 扁平小按鈕 */}
               <button
                 type="button"
                 onClick={setOpenedDateToToday}
@@ -568,7 +561,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             </div>
             <input
               type="date"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[17px]"
+              className="w-full min-w-0 appearance-none px-3 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[15px]"
               value={form.openedDate}
               onChange={e => setForm({ ...form, openedDate: e.target.value })}
             />
@@ -616,7 +609,6 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             取消
           </button>
 
-          {/* 🍎 底部主要按鈕：去除果凍光澤，回歸扁平 iOS 原廠藍 */}
           <button
             type="submit"
             className={`w-full bg-[#007AFF] text-white font-black py-4 rounded-full shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-[15px] tracking-widest flex items-center justify-center gap-2 border-none ${batchQueue.length > 0 ? 'col-span-2 sm:col-span-1' : ''}`}

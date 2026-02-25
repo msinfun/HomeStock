@@ -22,56 +22,61 @@ interface BatchEditState {
 const normalizeForMatch = (text: string) => {
   if (!text) return '';
   return text
-    .replace(/[0-9.]+|[gmlkg克匙杯顆個包條片兩的只毫升公克]/gi, '')
+    .replace(/[0-9.\/]+/g, '')
+    .replace(/[a-zA-Z°%\.]/g, '')
+    .replace(/[半一二兩三四五六七八九十]/g, '')
+    .replace(/[克匙杯顆個包條片只毫升公克大匙小匙斤把根滴塊份碗鍋盆串]/g, '')
     .replace(/[()\[\]\s]/g, '')
+    .replace(/少許|適量/g, '')
     .trim()
     .toLowerCase();
 };
 
 // ==========================================
-// 核心升級：支援分數、c.c. 與黑名單機制的縮放引擎
+// 核心升級：支援中文數字、分數、與黑名單機制的縮放引擎
 // ==========================================
+const CHINESE_NUMS: Record<string, number> = {
+  '半': 0.5, '一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5,
+  '六': 6, '七': 7, '八': 8, '九': 9, '十': 10
+};
+
 const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') => {
   if (factor === 1 || !text) return text;
 
-  // 匹配：數字(可含小數點或分數斜線) + 選擇性空白 + 緊接的文字單位(可含點，如 c.c.)
-  // Temporarily removing unicode range to test if it fixes the build
-  const regex = /(\d+(?:[\.\/]\d+)?)(\s*)([a-zA-Z°%\.]*)/gi;
+  // 匹配：阿拉伯數字或中文數字 + 選擇性空白 + 文字單位
+  const regex = /(\d+(?:[\.\/]\d+)?|[半一二兩三四五六七八九十])(\s*)([a-zA-Z°%\.克匙杯顆個包條片只毫升公克大匙小匙斤把根滴塊份碗鍋盆串]*)/gi;
 
-  return text.replace(regex, (match, num, space, unit, offset, fullText) => {
+  return text.replace(regex, (match, numStr, space, unit, offset, fullText) => {
     const nextChar = fullText.charAt(offset + match.length);
 
     // 防禦機制 1：排除步驟標號
-    // 如果緊接著標點符號，且沒有單位，視為編號 (如 "1. " 或 "2、")
     if (['.', '。', '、', ')', '）'].includes(nextChar) && unit.trim() === '') return match;
-
-    // 句首且無單位的純數字，通常是列表編號
     if (offset === 0 && unit.trim() === '') return match;
-
-    // 排除帶有特定前綴的數字 (如 "步驟2", "第1次")
     const prevText = fullText.substring(Math.max(0, offset - 3), offset);
     if (/(第|步|驟)/.test(prevText)) return match;
 
-    // 防禦機制 2：黑名單制度 (加入 °c, °f 防止溫度被放大)
+    // 防禦機制 2：黑名單制度
     const lowerUnit = unit.toLowerCase().trim();
     const isBlacklisted = /(度|分|時|秒|hr|min|sec|瓦|w|檔|速|cm|公分|吋|寸|人份|天|%|^c$|^f$|°c|°f)/.test(lowerUnit);
     if (isBlacklisted) return match;
 
-    // 執行縮放 (處理分數與小數)
+    // 解析數字 (支援中文映射)
     let val = 0;
-    if (num.includes('/')) {
-      const parts = num.split('/');
+    if (CHINESE_NUMS[numStr] !== undefined) {
+      val = CHINESE_NUMS[numStr];
+    } else if (numStr.includes('/')) {
+      const parts = numStr.split('/');
       const numerator = parseFloat(parts[0]);
       const denominator = parseFloat(parts[1]);
       if (denominator === 0 || isNaN(numerator) || isNaN(denominator)) return match;
       val = numerator / denominator;
     } else {
-      val = parseFloat(num);
+      val = parseFloat(numStr);
     }
 
     if (isNaN(val)) return match;
 
-    // 四捨五入到小數第一位，避免浮點數破圖 (如變成 0.300000004)
+    // 縮放並四捨五入到小數第一位
     let scaled = Math.round((val * factor) * 10) / 10;
 
     if (format === 'arrow') return `${match} ➝ ${scaled}${space}${unit}`;
@@ -91,7 +96,9 @@ const RecipeCard: React.FC<{
   onDeleteRequest: () => void;
   onAddToShopping: (name: string) => void;
   onUpdate: (recipe: Recipe) => void;
-}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping, onUpdate }) => {
+  isActiveSwipe?: boolean;
+  onSwipeStart?: () => void;
+}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping, onUpdate, isActiveSwipe, onSwipeStart }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps' | 'review'>('ingredients');
   const [costBreakdownExpanded, setCostBreakdownExpanded] = useState(false);
@@ -118,9 +125,17 @@ const RecipeCard: React.FC<{
   const startX = useRef(0);
   const threshold = 70;
 
+  useEffect(() => {
+    if (!isActiveSwipe) {
+      setOffsetX(0);
+      setSwipedOpen(false);
+    }
+  }, [isActiveSwipe]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isBatchMode) return;
     startX.current = e.touches[0].clientX;
+    onSwipeStart?.();
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -223,14 +238,16 @@ const RecipeCard: React.FC<{
     if (!coreTarget) return { found: false, quantity: 0 };
 
     let matchedItems = inventoryItems.filter(inv => {
-      const invSub = (inv.subCategory || '').toLowerCase();
-      return invSub.includes(coreTarget) || coreTarget.includes(invSub);
+      const invSub = normalizeForMatch(inv.subCategory || '');
+      // 移除反向 includes，確保「乳酪奶油」不會因為包含「奶油」而被誤判
+      return invSub === coreTarget || (invSub && invSub.includes(coreTarget));
     });
 
     if (matchedItems.length === 0) {
       matchedItems = inventoryItems.filter(inv => {
-        const invName = inv.name.toLowerCase();
-        return invName.includes(coreTarget) || coreTarget.includes(invName);
+        const invName = normalizeForMatch(inv.name);
+        // 確保庫存名稱等於食譜需求，或庫存名稱包含食譜需求(如: 無鹽奶油 包含 奶油)
+        return invName === coreTarget || invName.includes(coreTarget);
       });
     }
 
@@ -253,15 +270,50 @@ const RecipeCard: React.FC<{
     }));
   }, [safeIngredients, scaleFactor]);
 
-  // 沉浸式烹飪模式視圖
+  // 🍎 沉浸式烹飪模式視圖 (純手勢滑動版)
+  // --- 新增：沉浸模式滑動計算邏輯 ---
+  const cookStartX = useRef(0);
+
+  const handleCookTouchStart = (e: React.TouchEvent) => {
+    cookStartX.current = e.touches[0].clientX;
+  };
+
+  const handleCookTouchEnd = (e: React.TouchEvent) => {
+    const endX = e.changedTouches[0].clientX;
+    const diff = endX - cookStartX.current;
+
+    // 判斷滑動距離超過 50px 才觸發 (避免誤觸)
+    if (Math.abs(diff) > 50) {
+      if (diff < 0) {
+        // 向左滑 (下一階段)
+        if (cookingStepIndex < formattedSteps.length - 1) {
+          setCookingStepIndex(prev => prev + 1);
+        } else {
+          setIsCookingMode(false); // 最後一步結束
+        }
+      } else {
+        // 向右滑 (上一階段)
+        if (cookingStepIndex > 0) {
+          setCookingStepIndex(prev => prev - 1);
+        }
+      }
+    }
+  };
+  // ------------------------------------
+
+  // 🍎 沉浸式烹飪模式視圖 (純手勢滑動版)
   if (isCookingMode) {
     return (
-      <div className="fixed inset-0 z-[100] bg-slate-900 text-white flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div
+        className="fixed inset-0 z-[100] bg-slate-900 text-white flex flex-col animate-in slide-in-from-bottom duration-300"
+        onTouchStart={handleCookTouchStart}
+        onTouchEnd={handleCookTouchEnd}
+      >
         <div className="pt-14 pb-4 px-6 flex justify-between items-center border-b border-white/10">
           <button onClick={() => setIsCookingMode(false)} className="text-slate-900 font-black text-sm bg-white px-5 py-2.5 rounded-full active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,255,255,0.15)]">
             結束
           </button>
-          <span className="font-black tracking-widest text-xs text-slate-400 uppercase">沉浸烹飪模式</span>
+          <span className="font-black tracking-widest text-xs text-slate-400 uppercase">左右滑動切換</span>
           <div className="w-[60px]"></div>
         </div>
 
@@ -278,73 +330,69 @@ const RecipeCard: React.FC<{
           </p>
         </div>
 
-        <div className="flex-1 px-8 flex items-center justify-center overflow-y-auto">
+        <div className="flex-1 px-8 flex flex-col items-center justify-center overflow-hidden">
           {formattedSteps.length > 0 ? (
-            <p className="text-[26px] sm:text-3xl font-black leading-snug tracking-tight text-center text-white/90">
+            <p className="text-[26px] sm:text-3xl font-black leading-snug tracking-tight text-center text-white/90 select-none">
               {formattedSteps[cookingStepIndex]}
             </p>
           ) : (
             <p className="text-xl font-bold text-white/50">無步驟資料</p>
           )}
+
+          {/* 滑動引導動畫 */}
+          <div className="mt-16 flex items-center gap-6 text-white/30 animate-pulse">
+            <div className="flex flex-col items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+              <span className="text-[10px] font-bold tracking-widest uppercase">上一步</span>
+            </div>
+            <div className="w-px h-8 bg-white/10"></div>
+            <div className="flex flex-col items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+              <span className="text-[10px] font-bold tracking-widest uppercase">下一步</span>
+            </div>
+          </div>
         </div>
 
-        <div className="pb-12 pt-6 px-6 flex gap-4">
-          <button
-            disabled={cookingStepIndex === 0}
-            onClick={() => setCookingStepIndex(prev => prev - 1)}
-            className="flex-1 py-4 rounded-full bg-white/10 font-black tracking-widest text-white disabled:opacity-30 active:scale-95 transition-all text-[15px]"
-          >
-            上一階段
-          </button>
-          <button
-            onClick={() => {
-              if (cookingStepIndex < formattedSteps.length - 1) {
-                setCookingStepIndex(prev => prev + 1);
-              } else {
-                setIsCookingMode(false);
-              }
-            }}
-            className="flex-[1.5] py-4 rounded-full bg-[#007AFF] text-white font-black tracking-widest shadow-[0_8px_24px_rgba(0,122,255,0.4)] active:scale-95 transition-all text-[15px] border-none"
-          >
-            {cookingStepIndex < formattedSteps.length - 1 ? '完成，下一步' : '完成料理！'}
-          </button>
-        </div>
+        <div className="h-16 w-full"></div>
       </div>
     );
   }
 
   // 🍎 Review 模式 (心得簡化卡片)：扁平化白板
+  // 🍎 Review 模式 (心得簡化卡片)：完全對齊一般模式的內外雙層結構
   if (viewMode === 'review') {
     return (
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isBatchMode) onToggleSelection(recipe.id);
-          else onEdit();
-        }}
-        className={`bg-white/90 border border-white/60 p-5 transition-all relative rounded-[28px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${isSelected && isBatchMode ? 'bg-blue-50/50' : 'hover:bg-white'}`}
-      >
-        {isBatchMode && (
-          <div className="absolute top-5 left-4 z-10">
-            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-md shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
-              {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+      <div className="relative overflow-hidden group rounded-[32px] border border-white/40 shadow-[0_12px_32px_rgba(0,0,0,0.05),inset_0_2px_2px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(255,255,255,0.2)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isBatchMode) onToggleSelection(recipe.id);
+            else onEdit();
+          }}
+          className={`transition-all duration-300 relative z-10 cursor-pointer p-5 h-full ${isSelected && isBatchMode ? 'bg-white/50 ring-2 ring-[#007AFF]' : 'hover:bg-white/30'}`}
+        >
+          {isBatchMode && (
+            <div className="absolute top-5 left-4 z-10">
+              <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-md shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
+                {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+              </div>
             </div>
-          </div>
-        )}
-        <div className={`${isBatchMode ? 'pl-8' : ''}`}>
-          <div className="flex justify-between items-start mb-3">
-            <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight">{recipe.name}</h3>
-            <div className="flex flex-wrap justify-end gap-1.5 ml-2">
-              {recipe.tags.slice(0, 2).map(t => (
-                <span key={t} className="text-[10px] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-black tracking-widest whitespace-nowrap">{t}</span>
-              ))}
-            </div>
-          </div>
-          {recipe.review ? (
-            <p className="text-sm font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">{recipe.review}</p>
-          ) : (
-            <p className="text-sm font-bold text-slate-400 italic">暫無心得，點擊編輯新增...</p>
           )}
+          <div className={`${isBatchMode ? 'pl-8' : ''}`}>
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight">{recipe.name}</h3>
+              <div className="flex flex-wrap justify-end gap-1.5 ml-2">
+                {recipe.tags.slice(0, 2).map(t => (
+                  <span key={t} className="text-[10px] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-black tracking-widest whitespace-nowrap">{t}</span>
+                ))}
+              </div>
+            </div>
+            {recipe.review ? (
+              <p className="text-sm font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">{recipe.review}</p>
+            ) : (
+              <p className="text-sm font-bold text-slate-400 italic">暫無心得，點擊編輯新增...</p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -685,6 +733,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
   }, [search, selectedTags]);
 
   const [expandedParentTag, setExpandedParentTag] = useState<string | null>(null);
+  const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'default' | 'review'>(() => {
     try { return localStorage.getItem('homestock_recipe_view') === 'review' ? 'review' : 'default'; } catch { return 'default'; }
   });
@@ -769,15 +818,8 @@ const RecipeView: React.FC<RecipeViewProps> = ({
   });
 
   const requestDelete = (id: string) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: '確認刪除',
-      message: '確定要刪除這份食譜嗎？此動作無法復原。',
-      onConfirm: () => {
-        onDelete(id);
-        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    // 移除重複的彈窗，直接交給外層 (App.tsx) 的詳細彈窗處理
+    onDelete(id);
   };
 
   return (
@@ -866,7 +908,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
         ) : (
           filteredRecipes.map(recipe => (
             <div key={recipe.id} className="mb-4">
-              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} />
+              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} isActiveSwipe={activeSwipeId === recipe.id} onSwipeStart={() => setActiveSwipeId(recipe.id)} />
             </div>
           ))
         )}
@@ -900,8 +942,8 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 檢視設定彈窗 */}
       {isViewMenuOpen && (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/80 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/40 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
               <button onClick={() => setIsViewMenuOpen(false)} className="p-2.5 bg-white border border-white shadow-sm rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">

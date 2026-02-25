@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { ShoppingItem, InventoryItem } from '../types';
 
 interface ShoppingListViewProps {
@@ -24,16 +24,29 @@ interface ShoppingItemRowProps {
   item: ShoppingItem;
   onRemove: (id: string) => void;
   onToggle: (id: string) => void;
+  isActiveSwipe: boolean;
+  onSwipeStart: () => void;
 }
 
-const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onToggle }) => {
+const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onToggle, isActiveSwipe, onSwipeStart }) => {
   const [offsetX, setOffsetX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
   const threshold = 70;
 
+  // 監聽外部狀態，如果自己不是被選中的那個，就自動縮回去
+  useEffect(() => {
+    if (!isActiveSwipe) {
+      setOffsetX(0);
+      setSwipedOpen(false);
+    }
+  }, [isActiveSwipe]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
+    setIsSwiping(true);
+    onSwipeStart(); // 通知父元件：「我被滑動了」
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -111,6 +124,7 @@ const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onTog
 const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   shoppingList, onRemove, onToggle, showAddQuickItem, onCloseAddQuickItem, onAddQuickItem, categories, existingItems
 }) => {
+  const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
 
   const totalCount = shoppingList.length;
   const completedCount = shoppingList.filter(item => item.isChecked).length;
@@ -170,6 +184,8 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 item={item}
                 onRemove={onRemove}
                 onToggle={onToggle}
+                isActiveSwipe={activeSwipeId === item.id}
+                onSwipeStart={() => setActiveSwipeId(item.id)}
               />
             ))}
           </div>
