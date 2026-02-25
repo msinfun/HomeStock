@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { InventoryItem, ShoppingItem, ViewState, AppSettings } from '../types';
 
@@ -13,12 +12,12 @@ interface DashboardProps {
 
 // Helper interface for aggregated restocking
 interface RestockGroup {
-  id: string; // Group ID (subCategory or name)
-  name: string; // Display Name (subCategory or name)
+  id: string;
+  name: string;
   category: string;
   totalQuantity: number;
   maxThreshold: number;
-  items: InventoryItem[]; // Items included in this group
+  items: InventoryItem[];
   nextRestockDate: string | null;
 }
 
@@ -33,25 +32,21 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
   const expiringItems = items.filter(item => {
     if (!item.expiryDate) return false;
     const expiry = new Date(item.expiryDate);
-    // Modified: Include expired items (expiry <= today) and upcoming items within threshold
     return expiry <= thresholdDate;
   }).sort((a, b) => {
     return (a.expiryDate!).localeCompare(b.expiryDate!);
   });
 
-  // Aggregated Restock Logic
   const replenishmentItems = useMemo(() => {
     const groups: Record<string, RestockGroup> = {};
-    
+
     items.forEach(item => {
       const subCat = (item.subCategory || '').trim();
       const name = item.name.trim();
-      
-      // Determine grouping key and display name
-      // If subCategory exists, group by it. Otherwise group by name.
+
       const key = subCat ? `SUB:${subCat.toLowerCase()}` : `NAME:${name.toLowerCase()}`;
       const displayName = subCat ? subCat : name;
-      
+
       if (!groups[key]) {
         groups[key] = {
           id: key,
@@ -63,29 +58,23 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
           nextRestockDate: null
         };
       }
-      
+
       const group = groups[key];
       group.items.push(item);
       group.totalQuantity += item.quantity;
-      // Take the MAXIMUM threshold in the group as the safety level for the group
       group.maxThreshold = Math.max(group.maxThreshold, item.minThreshold ?? 0);
-      
-      // Keep earliest valid nextRestockDate if available
+
       if (item.nextRestockDate) {
         if (!group.nextRestockDate || item.nextRestockDate < group.nextRestockDate) {
-           group.nextRestockDate = item.nextRestockDate;
+          group.nextRestockDate = item.nextRestockDate;
         }
       }
     });
 
-    // Filter: Total Quantity < Max Threshold
-    // And exclude if Max Threshold is 0 (meaning no tracking needed)
-    return Object.values(groups)
-      .filter(g => g.maxThreshold > 0 && g.totalQuantity < g.maxThreshold);
-      
+    return Object.values(groups).filter(g => g.maxThreshold > 0 && g.totalQuantity < g.maxThreshold);
+
   }, [items]);
 
-  // Modified: Sync outOfStockCount with the replenishment/aggregation logic
   const outOfStockCount = replenishmentItems.length;
 
   const getRestockLabel = (dateStr: string) => {
@@ -95,11 +84,12 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
     const target = new Date(y, m - 1, d);
     const diffTime = target.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (diffDays > 0) return `再 ${diffDays} 天購買`;
-    if (diffDays === 0) return `建議今天購買`;
-    return `建議立即購買`;
+    if (diffDays > 0) return `再 ${diffDays} 天`;
+    if (diffDays === 0) return `建議今日`;
+    return `立即購買`;
   };
 
+  // 🍎 修正：回歸極簡扁平化的原廠標籤（去除漸層與高光）
   const getExpiryBadgeClass = (expiryDate: string) => {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
@@ -108,12 +98,11 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
     const diffTime = target.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays <= 3) return "bg-red-100 text-[#FF3B30]";
-    if (diffDays <= 7) return "bg-orange-100 text-[#FF9500]";
-    return "bg-green-100 text-[#34C759]";
+    if (diffDays <= 3) return "bg-rose-50 text-[#FF3B30]";
+    if (diffDays <= 7) return "bg-orange-50 text-[#FF9500]";
+    return "bg-emerald-50 text-[#34C759]";
   };
 
-  // Logic for List Expansion
   const displayedRestockItems = isRestockExpanded ? replenishmentItems : replenishmentItems.slice(0, 3);
   const hiddenRestockCount = replenishmentItems.length - displayedRestockItems.length;
 
@@ -122,64 +111,64 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
-      {/* 1. 頂部統計卡片 (Overview Cards) */}
+
+      {/* 1. 頂部統計卡片 (Overview Cards) - 保持完美的外部光學 */}
       <section className="grid grid-cols-2 gap-4">
-        {/* 總物品數卡片 */}
-        <div 
-          className="bg-white/70 backdrop-blur-xl p-5 rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group" 
+        <div
+          className="bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.6),inset_0_-1px_1px_rgba(255,255,255,0.2)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('inventory')}
         >
-          <span className="text-4xl font-black tracking-tighter text-slate-800 group-hover:text-[#007AFF] transition-colors drop-shadow-sm">{items.length}</span>
-          <span className="text-xs font-black tracking-wider text-slate-400 mt-2 uppercase">總物品數</span>
+          <span className="text-[40px] font-black tracking-tighter text-slate-800 group-hover:text-[#007AFF] transition-colors drop-shadow-sm leading-none">{items.length}</span>
+          <span className="text-[11px] font-black tracking-widest text-slate-400 mt-2.5 uppercase">總物品數</span>
         </div>
-        
-        {/* 缺貨待補卡片 */}
-        <div 
-          className="bg-white/70 backdrop-blur-xl p-5 rounded-[32px] shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/80 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group" 
+
+        <div
+          className="bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/40 shadow-[0_20px_40px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.6),inset_0_-1px_1px_rgba(255,255,255,0.2)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('shopping')}
         >
-          <span className={`text-4xl font-black tracking-tighter transition-colors drop-shadow-sm ${outOfStockCount > 0 ? 'text-[#FF3B30]' : 'text-slate-800 group-hover:text-[#007AFF]'}`}>
-             {outOfStockCount}
+          <span className={`text-[40px] font-black tracking-tighter transition-colors drop-shadow-sm leading-none ${outOfStockCount > 0 ? 'text-[#FF3B30]' : 'text-slate-800 group-hover:text-[#007AFF]'}`}>
+            {outOfStockCount}
           </span>
-          <span className="text-xs font-black tracking-wider text-slate-400 mt-2 uppercase">缺貨待補</span>
+          <span className="text-[11px] font-black tracking-widest text-slate-400 mt-2.5 uppercase">缺貨待補</span>
         </div>
       </section>
 
       {/* 2. 即將過期 (Expiry Alerts) */}
-      <section className="bg-white/70 backdrop-blur-xl border border-white/80 rounded-[32px] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.05)]">
-        <div 
-           className="flex justify-between items-center mb-4 cursor-pointer group"
-           onClick={() => setIsExpiryExpanded(!isExpiryExpanded)}
+      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] relative">
+        <div
+          className="flex justify-between items-center mb-5 cursor-pointer group"
+          onClick={() => setIsExpiryExpanded(!isExpiryExpanded)}
         >
-          <div className="flex items-center gap-3 text-slate-800">
-            <div className="p-2.5 bg-red-50 rounded-2xl border border-white shadow-sm">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF3B30]"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF3B30]"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
-            <h2 className="text-xl font-black tracking-tighter text-slate-800">即將過期</h2>
+            <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-sm">即將過期</h2>
           </div>
-          <button className="bg-white border border-white shadow-sm text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-50 transition-colors p-2 rounded-full">
-             {isExpiryExpanded ? (
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-             ) : (
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-             )}
+          <button className="bg-white/60 backdrop-blur-md border border-white shadow-sm text-slate-400 group-hover:text-[#007AFF] transition-colors p-2 rounded-full">
+            {isExpiryExpanded ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            )}
           </button>
         </div>
-        
+
         {expiringItems.length === 0 ? (
-          <div className="text-center py-6 text-sm text-slate-500 font-bold bg-white/50 rounded-[24px] border border-dashed border-slate-200">
+          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-[24px] border border-dashed border-white">
             目前沒有即將過期的物品
           </div>
         ) : (
           <ul className="space-y-3">
             {displayedExpiryItems.map(item => (
-              <li 
-                key={item.id} 
+              <li
+                key={item.id}
                 onClick={() => onEdit(item)}
-                className="flex justify-between items-center gap-3 p-4 bg-white/60 border border-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-[24px]"
+                // 🍎 內部小卡片：去除高光，回歸乾淨的半透白板與柔和陰影
+                className="flex justify-between items-center gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-[24px]"
               >
-                <span className="text-[17px] font-black tracking-tight text-slate-800 flex-1 truncate">{item.name}</span>
-                <span className={`text-[10px] font-black tracking-widest px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 border border-white shadow-sm ${item.expiryDate ? getExpiryBadgeClass(item.expiryDate) : 'bg-slate-100 text-slate-500'}`}>
+                <span className="text-[16px] font-black tracking-tight text-slate-800 flex-1 truncate leading-tight">{item.name}</span>
+                <span className={`text-[11px] font-black tracking-widest px-3.5 py-1.5 rounded-full whitespace-nowrap shrink-0 ${item.expiryDate ? getExpiryBadgeClass(item.expiryDate) : 'bg-slate-100 text-slate-400'}`}>
                   {item.expiryDate || '未知'}
                 </span>
               </li>
@@ -187,19 +176,18 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
           </ul>
         )}
 
-        {/* 展開 / 收起按鈕：改為膠囊 */}
         {!isExpiryExpanded && hiddenExpiryCount > 0 && (
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); setIsExpiryExpanded(true); }}
-            className="w-full text-center text-xs font-black tracking-widest text-slate-500 mt-4 py-3 bg-white border border-white shadow-sm hover:text-slate-700 hover:bg-slate-50 active:scale-[0.98] rounded-full transition-all uppercase"
+            className="w-full text-center text-[11px] font-black tracking-widest text-slate-500 mt-5 py-3.5 bg-white/80 border border-white shadow-sm hover:text-[#007AFF] hover:bg-white active:scale-[0.98] rounded-full transition-all uppercase"
           >
             還有 {hiddenExpiryCount} 項即將過期...
           </button>
         )}
         {isExpiryExpanded && expiringItems.length > 3 && (
-            <button 
+          <button
             onClick={(e) => { e.stopPropagation(); setIsExpiryExpanded(false); }}
-            className="w-full text-center text-xs font-black tracking-widest text-slate-500 mt-4 py-3 bg-white border border-white shadow-sm hover:text-slate-700 hover:bg-slate-50 active:scale-[0.98] rounded-full transition-all uppercase"
+            className="w-full text-center text-[11px] font-black tracking-widest text-slate-500 mt-5 py-3.5 bg-white/80 border border-white shadow-sm hover:text-[#007AFF] hover:bg-white active:scale-[0.98] rounded-full transition-all uppercase"
           >
             收起清單
           </button>
@@ -207,28 +195,28 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       </section>
 
       {/* 3. 建議補貨 (Replenishment Suggestions) */}
-      <section className="bg-white/70 backdrop-blur-xl border border-white/80 rounded-[32px] p-6 shadow-[0_12px_40px_rgba(0,0,0,0.05)]">
-         <div 
-           className="flex justify-between items-center mb-4 cursor-pointer group"
-           onClick={() => setIsRestockExpanded(!isRestockExpanded)}
-         >
-          <div className="flex items-center gap-3 text-slate-800">
-            <div className="p-2.5 bg-blue-50 rounded-2xl border border-white shadow-sm">
-               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#007AFF]"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] relative">
+        <div
+          className="flex justify-between items-center mb-5 cursor-pointer group"
+          onClick={() => setIsRestockExpanded(!isRestockExpanded)}
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#007AFF]"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
             </div>
-            <h2 className="text-xl font-black tracking-tighter text-slate-800">建議補貨</h2>
+            <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-sm">建議補貨</h2>
           </div>
-          <button className="bg-white border border-white shadow-sm text-slate-400 group-hover:text-slate-600 group-hover:bg-slate-50 transition-colors p-2 rounded-full">
-             {isRestockExpanded ? (
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6"/></svg>
-             ) : (
-               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-             )}
+          <button className="bg-white/60 backdrop-blur-md border border-white shadow-sm text-slate-400 group-hover:text-[#007AFF] transition-colors p-2 rounded-full">
+            {isRestockExpanded ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+            )}
           </button>
         </div>
-        
+
         {replenishmentItems.length === 0 ? (
-          <div className="text-center py-6 text-sm text-slate-500 font-bold bg-white/50 rounded-[24px] border border-dashed border-slate-200">
+          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-[24px] border border-dashed border-white">
             庫存充足，無需補貨
           </div>
         ) : (
@@ -236,62 +224,61 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
             {displayedRestockItems.map(group => {
               const isInShoppingList = shoppingList.some(s => s.name.trim().toLowerCase() === group.name.trim().toLowerCase());
               const itemNames = Array.from(new Set(group.items.map(i => i.name))).join('、');
-              
+
               return (
-                <div key={group.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white/60 border border-white/80 shadow-[0_2px_8px_rgba(0,0,0,0.03)] rounded-[24px] animate-in fade-in duration-300">
+                <div key={group.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] hover:bg-white transition-all animate-in fade-in duration-300">
                   <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="text-[17px] font-black tracking-tight text-slate-800 block">{group.name}</span>
-                        {group.nextRestockDate && (
-                           <span className="text-[10px] font-black tracking-widest px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap border border-white">
-                             {getRestockLabel(group.nextRestockDate)}
-                           </span>
-                        )}
-                      </div>
-                      <div className="text-xs font-bold text-slate-500 mt-1.5 flex items-center gap-1.5">
-                        <span className="inline-block w-2 h-2 rounded-full bg-[#FF3B30] shadow-[0_0_8px_rgba(255,59,48,0.4)]"></span>
-                        <span className="text-[#FF3B30]">總量 {group.totalQuantity} <span className="text-slate-400 font-medium">(低於 {group.maxThreshold})</span></span>
-                      </div>
-                      {group.id.startsWith('SUB:') && (
-                         <div className="text-[11px] font-bold text-slate-400 mt-1.5 truncate">
-                           包含: {itemNames}
-                         </div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="text-[16px] font-black tracking-tight text-slate-800 block leading-tight">{group.name}</span>
+                      {group.nextRestockDate && (
+                        <span className="text-[10px] font-black tracking-widest px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap uppercase">
+                          {getRestockLabel(group.nextRestockDate)}
+                        </span>
                       )}
+                    </div>
+                    <div className="text-[11px] font-black tracking-wide text-slate-500 mt-2 flex items-center gap-1.5">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#FF3B30] shadow-[0_0_6px_rgba(255,59,48,0.8)]"></span>
+                      <span className="text-[#FF3B30]">總量 {group.totalQuantity} <span className="text-slate-400 font-bold tracking-normal ml-0.5">(低於 {group.maxThreshold})</span></span>
+                    </div>
+                    {group.id.startsWith('SUB:') && (
+                      <div className="text-[11px] font-bold text-slate-400 mt-1.5 truncate bg-slate-100 inline-block px-2.5 py-1 rounded-full">
+                        包含: {itemNames}
+                      </div>
+                    )}
                   </div>
-                  {/* 加入按鈕：膠囊狀 */}
-                  <button 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
+
+                  {/* 🍎 修正：回歸極簡扁平的原廠藍按鈕，去除果凍光影 */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
                       if (!isInShoppingList) {
-                        onAddToShopping(group.name.trim(), group.category); 
+                        onAddToShopping(group.name.trim(), group.category);
                       }
                     }}
                     disabled={isInShoppingList}
-                    className={`px-4 py-2.5 rounded-full text-xs font-black tracking-widest transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-sm border border-white active:scale-95 ${
-                      isInShoppingList 
-                        ? 'bg-slate-100 text-slate-400 cursor-default'
-                        : 'text-[#007AFF] bg-blue-50/80 hover:bg-blue-100'
-                    }`}
+                    className={`px-5 py-3 sm:py-2.5 rounded-full text-[12px] font-black tracking-widest transition-all flex items-center justify-center gap-1.5 shrink-0 active:scale-95 uppercase ${isInShoppingList
+                      ? 'bg-slate-100 text-slate-400 cursor-default'
+                      : 'text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600'
+                      }`}
                   >
                     {isInShoppingList ? '已加入' : '+ 加入待買'}
                   </button>
                 </div>
               );
             })}
-            
-            {/* 展開 / 收起按鈕：改為膠囊 */}
+
             {!isRestockExpanded && hiddenRestockCount > 0 && (
-              <button 
+              <button
                 onClick={() => setIsRestockExpanded(true)}
-                className="w-full text-center text-xs font-black tracking-widest text-slate-500 mt-4 py-3 bg-white border border-white shadow-sm hover:text-slate-700 hover:bg-slate-50 active:scale-[0.98] rounded-full transition-all uppercase"
+                className="w-full text-center text-[11px] font-black tracking-widest text-slate-500 mt-5 py-3.5 bg-white/80 border border-white shadow-sm hover:text-[#007AFF] hover:bg-white active:scale-[0.98] rounded-full transition-all uppercase"
               >
                 還有 {hiddenRestockCount} 項待補...
               </button>
             )}
             {isRestockExpanded && replenishmentItems.length > 3 && (
-               <button 
+              <button
                 onClick={() => setIsRestockExpanded(false)}
-                className="w-full text-center text-xs font-black tracking-widest text-slate-500 mt-4 py-3 bg-white border border-white shadow-sm hover:text-slate-700 hover:bg-slate-50 active:scale-[0.98] rounded-full transition-all uppercase"
+                className="w-full text-center text-[11px] font-black tracking-widest text-slate-500 mt-5 py-3.5 bg-white/80 border border-white shadow-sm hover:text-[#007AFF] hover:bg-white active:scale-[0.98] rounded-full transition-all uppercase"
               >
                 收起清單
               </button>

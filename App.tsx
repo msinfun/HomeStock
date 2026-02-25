@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { InventoryItem, ShoppingItem, ViewState, AppSettings, InventoryDef, InventoryTransaction, InventoryBatch, Recipe, SystemBackup, RecipeTagStructure } from './types';
 import Dashboard from './components/Dashboard';
@@ -51,10 +50,10 @@ const App: React.FC = () => {
           if (r.cuisine) tags.push(r.cuisine);
           if (r.dishType) tags.push(r.dishType);
         }
-        
-        const safeIngredients = Array.isArray(r.ingredients) 
-            ? r.ingredients.map((i: any) => typeof i === 'string' ? i : `${i.name || ''} ${i.quantity || ''}`) 
-            : [];
+
+        const safeIngredients = Array.isArray(r.ingredients)
+          ? r.ingredients.map((i: any) => typeof i === 'string' ? i : `${i.name || ''} ${i.quantity || ''}`)
+          : [];
 
         return {
           ...r,
@@ -119,7 +118,7 @@ const App: React.FC = () => {
     isOpen: false,
     title: '',
     message: '',
-    onConfirm: () => {},
+    onConfirm: () => { },
   });
 
   // Global Event Listener for Alerts
@@ -160,7 +159,7 @@ const App: React.FC = () => {
       const totalQuantity = Math.max(0, itemLogs.reduce((acc, t) => acc + t.delta, 0));
       const inputs = itemLogs.filter(t => t.delta > 0).sort((a, b) => (a.expiryDate || '9999').localeCompare(b.expiryDate || '9999'));
       let totalConsumed = Math.abs(itemLogs.filter(t => t.delta < 0).reduce((acc, t) => acc + t.delta, 0));
-      
+
       const activeBatches: InventoryBatch[] = [];
       for (const input of inputs) {
         if (totalConsumed <= 0) {
@@ -247,7 +246,7 @@ const App: React.FC = () => {
       }
     });
   };
-  
+
   const handleClearAllData = () => {
     localStorage.clear();
     window.location.reload();
@@ -316,7 +315,7 @@ const App: React.FC = () => {
 
     if (current) {
       const delta = updated.quantity - current.quantity;
-      
+
       if (delta > 0) {
         setShoppingList(prev => prev.filter(s => {
           if (!s.isChecked) return true;
@@ -331,7 +330,7 @@ const App: React.FC = () => {
 
       if (delta !== 0) {
         let type: InventoryTransaction['type'] = transactionType || (delta > 0 ? 'restock' : 'consume');
-        
+
         setTransactions(prev => [...prev, {
           id: generateId(),
           defId: updated.id,
@@ -340,11 +339,11 @@ const App: React.FC = () => {
           timestamp,
           expiryDate: updated.expiryDate,
         }]);
-      } 
+      }
       else if (updated.expiryDate !== current.expiryDate) {
         setTransactions(prev => {
           const itemTrans = prev.filter(t => t.defId === updated.id && t.delta > 0);
-          if (itemTrans.length === 0) return prev; 
+          if (itemTrans.length === 0) return prev;
           itemTrans.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
           const latestTransId = itemTrans[0].id;
           return prev.map(t => t.id === latestTransId ? { ...t, expiryDate: updated.expiryDate } : t);
@@ -381,191 +380,202 @@ const App: React.FC = () => {
 
   const tryRemoveFromShoppingList = (itemName: string) => {
     setShoppingList(prev => prev.filter(s => {
-        if (!s.isChecked) return true;
-        const shoppingName = s.name.trim().toLowerCase();
-        const inventoryName = itemName.trim().toLowerCase();
-        if (shoppingName.includes(inventoryName)) return false;
-        return true;
+      if (!s.isChecked) return true;
+      const shoppingName = s.name.trim().toLowerCase();
+      const inventoryName = itemName.trim().toLowerCase();
+      if (shoppingName.includes(inventoryName)) return false;
+      return true;
     }));
   };
 
   return (
-    <div className="min-h-screen pb-24 flex flex-col items-center bg-[#F2F2F7] text-slate-900">
-      
-      {/* 🌟 頂部 Header 升級：毛玻璃、細亮邊、果凍按鈕與粗體圖示 */}
-      <header className="w-full max-w-2xl px-4 py-3 flex justify-between items-center bg-white/70 backdrop-blur-2xl sticky top-0 z-40 border-b border-white/80 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-        <button 
-           onClick={() => setActiveView('analysis')} 
-           className={`p-2.5 rounded-full transition-all active:scale-95 border ${
-             activeView === 'analysis' 
-             ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' 
-             : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-sm'
-           }`}
-           title="分析報表"
-        >
-           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        </button>
+    <div className="min-h-screen pb-24 flex flex-col items-center text-slate-900 relative overflow-hidden bg-[#F2F2F7]">
 
-        <div className="flex gap-2">
-           <button 
-             onClick={() => window.location.reload()} 
-             className="text-slate-400 p-2.5 rounded-full transition-all active:scale-95 border border-transparent hover:bg-white hover:border-white hover:shadow-sm"
-             title="重新整理"
-           >
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
-           </button>
-           <button 
-             onClick={() => setActiveView('settings')} 
-             className={`p-2.5 rounded-full transition-all active:scale-95 border ${
-               activeView === 'settings' 
-               ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' 
-               : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-sm'
-             }`}
-             title="設定"
-           >
-             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-           </button>
-        </div>
-      </header>
+      {/* 🌟 蘋果動態環境光 (Ambient Glow Background) - 這是毛玻璃立體感的靈魂！ */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* 右上角：科技藍光 */}
+        <div className="absolute top-[-5%] right-[-10%] w-[350px] h-[350px] rounded-full bg-blue-500/15 blur-[80px]"></div>
+        {/* 左中側：薄荷綠光 */}
+        <div className="absolute top-[25%] left-[-15%] w-[300px] h-[300px] rounded-full bg-emerald-400/15 blur-[100px]"></div>
+        {/* 右下角：柔和紫光 */}
+        <div className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-purple-400/15 blur-[120px]"></div>
+      </div>
 
-      {/* 內容區塊維持不變 */}
-      <main className="w-full max-w-2xl px-4 py-6">
-        {activeView === 'dashboard' && (
-          <Dashboard 
-            items={items} 
-            shoppingList={shoppingList} 
-            onSwitchView={setActiveView} 
-            settings={settings} 
-            onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} 
-            onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }}
-          />
-        )}
-        {activeView === 'inventory' && (
-          <InventoryList 
-            items={items} 
-            shoppingList={shoppingList} 
-            onUpdate={handleUpdateItem} 
-            onScrap={(i) => handleUpdateItem({...i, quantity: 0}, 'scrap')} 
-            onDelete={handleDeleteInventoryItem} 
-            onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }} 
-            onDuplicate={(i) => { 
+      {/* 確保所有內容都在環境光之上 */}
+      <div className="relative z-10 w-full flex flex-col items-center">
+        {/* 🌟 頂部 Header 升級：毛玻璃、細亮邊、果凍按鈕與粗體圖示 */}
+        <header className="w-full max-w-2xl px-4 py-3 flex justify-between items-center bg-white/60 backdrop-blur-[40px] backdrop-saturate-150 sticky top-0 z-40 border-b border-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+          <button
+            onClick={() => setActiveView('analysis')}
+            className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'analysis'
+              ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]'
+              : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-sm'
+              }`}
+            title="分析報表"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="text-slate-400 p-2.5 rounded-full transition-all active:scale-95 border border-transparent hover:bg-white hover:border-white hover:shadow-sm"
+              title="重新整理"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>
+            </button>
+            <button
+              onClick={() => setActiveView('settings')}
+              className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'settings'
+                ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]'
+                : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-sm'
+                }`}
+              title="設定"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>
+            </button>
+          </div>
+        </header>
+
+        {/* 內容區塊 */}
+        <main className="w-full max-w-2xl px-4 py-6">
+          {activeView === 'dashboard' && (
+            <Dashboard
+              items={items}
+              shoppingList={shoppingList}
+              onSwitchView={setActiveView}
+              settings={settings}
+              onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])}
+              onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }}
+            />
+          )}
+          {activeView === 'inventory' && (
+            <InventoryList
+              items={items}
+              shoppingList={shoppingList}
+              onUpdate={handleUpdateItem}
+              onScrap={(i) => handleUpdateItem({ ...i, quantity: 0 }, 'scrap')}
+              onDelete={handleDeleteInventoryItem}
+              onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }}
+              onDuplicate={(i) => {
                 const { id, ...rest } = i;
                 setEditingItem({ ...rest, id: '' } as InventoryItem);
-                setActiveView('add'); 
-            }} 
-            categories={categories} 
-            onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} 
-            settings={settings}
-          />
-        )}
-        {activeView === 'recipes' && (
-          <RecipeView 
-            recipes={recipes} 
-            inventoryItems={items} 
-            shoppingList={shoppingList} 
-            recipeTags={recipeTags}
-            onDelete={handleDeleteRecipe} 
-            onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} 
-            onUpdate={handleUpdateRecipeDirectly}
-            onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])}
-          />
-        )}
-        {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
-        {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
-        {activeView === 'shopping' && (
-          <ShoppingListView 
-            shoppingList={shoppingList} 
-            onRemove={handleDeleteShoppingItem} 
-            onToggle={(id) => setShoppingList(prev => prev.map(s => s.id === id ? { ...s, isChecked: !s.isChecked } : s))} 
-            showAddQuickItem={isAddingQuickShopping} 
-            onCloseAddQuickItem={() => setIsAddingQuickShopping(false)} 
-            onAddQuickItem={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} 
-            categories={categories} 
-            existingItems={items} 
-          />
-        )}
-        {activeView === 'analysis' && <AnalysisView items={items} transactions={transactions} defs={defs} />}
-        {activeView === 'settings' && (
-          <SettingsView 
-            settings={settings} 
-            onUpdateSettings={setSettings} 
-            categories={categories} 
-            onUpdateCategories={setCategories} 
-            locations={locations} 
-            onUpdateLocations={setLocations} 
-            recipeTags={recipeTags}
-            onUpdateRecipeTags={setRecipeTags}
-            onBack={() => setActiveView('dashboard')} 
-            items={items} 
-            defs={defs} 
-            transactions={transactions} 
-            recipes={recipes}
-            shoppingList={shoppingList}
-            onExcelImport={handleExcelImport}
-            onSystemRestore={handleSystemRestore}
-            onClearAllData={handleClearAllData}
-          />
-        )}
-        {(activeView === 'add' || activeView === 'edit') && (
-          <AddItemView 
-            initialData={editingItem || undefined} 
-            categories={categories} 
-            locations={locations} 
-            existingItems={items} 
-            onAdd={(item, stay) => {
-              if (editingItem && editingItem.id) {
-                handleUpdateItem({ ...item, id: editingItem.id, batches: editingItem.batches });
-              } else {
-                const existingDef = defs.find(d => 
-                    d.name.trim() === item.name.trim() && 
+                setActiveView('add');
+              }}
+              categories={categories}
+              onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])}
+              settings={settings}
+            />
+          )}
+          {activeView === 'recipes' && (
+            <RecipeView
+              recipes={recipes}
+              inventoryItems={items}
+              shoppingList={shoppingList}
+              recipeTags={recipeTags}
+              onDelete={handleDeleteRecipe}
+              onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }}
+              onUpdate={handleUpdateRecipeDirectly}
+              onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])}
+            />
+          )}
+          {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
+          {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
+          {activeView === 'shopping' && (
+            <ShoppingListView
+              shoppingList={shoppingList}
+              onRemove={handleDeleteShoppingItem}
+              onToggle={(id) => setShoppingList(prev => prev.map(s => s.id === id ? { ...s, isChecked: !s.isChecked } : s))}
+              showAddQuickItem={isAddingQuickShopping}
+              onCloseAddQuickItem={() => setIsAddingQuickShopping(false)}
+              onAddQuickItem={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])}
+              categories={categories}
+              existingItems={items}
+            />
+          )}
+          {activeView === 'analysis' && <AnalysisView items={items} transactions={transactions} defs={defs} />}
+          {activeView === 'settings' && (
+            <SettingsView
+              settings={settings}
+              onUpdateSettings={setSettings}
+              categories={categories}
+              onUpdateCategories={setCategories}
+              locations={locations}
+              onUpdateLocations={setLocations}
+              recipeTags={recipeTags}
+              onUpdateRecipeTags={setRecipeTags}
+              onBack={() => setActiveView('dashboard')}
+              items={items}
+              defs={defs}
+              transactions={transactions}
+              recipes={recipes}
+              shoppingList={shoppingList}
+              onExcelImport={handleExcelImport}
+              onSystemRestore={handleSystemRestore}
+              onClearAllData={handleClearAllData}
+            />
+          )}
+          {(activeView === 'add' || activeView === 'edit') && (
+            <AddItemView
+              initialData={editingItem || undefined}
+              categories={categories}
+              locations={locations}
+              existingItems={items}
+              onAdd={(item, stay) => {
+                if (editingItem && editingItem.id) {
+                  handleUpdateItem({ ...item, id: editingItem.id, batches: editingItem.batches });
+                } else {
+                  const existingDef = defs.find(d =>
+                    d.name.trim() === item.name.trim() &&
                     d.defaultLocation === item.location
-                );
+                  );
 
-                if (existingDef) {
+                  if (existingDef) {
                     const transactionId = generateId();
                     const newTransaction: InventoryTransaction = {
-                        id: transactionId,
-                        defId: existingDef.id,
-                        type: 'restock',
-                        delta: item.quantity,
-                        timestamp: new Date().toISOString(),
-                        expiryDate: item.expiryDate
+                      id: transactionId,
+                      defId: existingDef.id,
+                      type: 'restock',
+                      delta: item.quantity,
+                      timestamp: new Date().toISOString(),
+                      expiryDate: item.expiryDate
                     };
                     setTransactions(prev => [...prev, newTransaction]);
-                    
+
                     setDefs(prev => prev.map(d => d.id === existingDef.id ? {
-                        ...d,
-                        category: item.category,
-                        subCategory: item.subCategory,
-                        remarks: item.remarks,
-                        packageSize: item.packageSize,
-                        price: item.price
+                      ...d,
+                      category: item.category,
+                      subCategory: item.subCategory,
+                      remarks: item.remarks,
+                      packageSize: item.packageSize,
+                      price: item.price
                     } : d));
 
                     tryRemoveFromShoppingList(item.name);
 
-                } else {
+                  } else {
                     const id = generateId();
                     setDefs(prev => [...prev, { ...item, id, defaultLocation: item.location, createdDate: new Date().toISOString() }]);
                     setTransactions(prev => [...prev, { id: generateId(), defId: id, type: 'init', delta: item.quantity, timestamp: new Date().toISOString(), expiryDate: item.expiryDate }]);
-                    
-                    tryRemoveFromShoppingList(item.name);
-                }
-              }
-              if (!stay) setActiveView('inventory');
-            }} 
-            onCancel={() => setActiveView('inventory')} 
-          />
-        )}
-      </main>
 
-      <Navbar 
-        activeView={activeView === 'add-recipe' || activeView === 'edit-recipe' ? 'recipes' : activeView} 
-        setActiveView={setActiveView} 
+                    tryRemoveFromShoppingList(item.name);
+                  }
+                }
+                if (!stay) setActiveView('inventory');
+              }}
+              onCancel={() => setActiveView('inventory')}
+            />
+          )}
+        </main>
+      </div>
+
+      <Navbar
+        activeView={activeView === 'add-recipe' || activeView === 'edit-recipe' ? 'recipes' : activeView}
+        setActiveView={setActiveView}
         onAddClick={handleHeaderAddClick}
       />
 
-      <ConfirmationModal 
+      <ConfirmationModal
         isOpen={modalConfig.isOpen}
         title={modalConfig.title}
         message={modalConfig.message}
