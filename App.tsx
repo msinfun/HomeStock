@@ -25,6 +25,14 @@ const DEFAULT_RECIPE_TAGS: RecipeTagStructure = {
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
 const normalizeForMatch = (str: string) => str.replace(/[()\[\]\s]/g, '').toLowerCase();
 
+// 🍎 虛擬身分證解析器：分離原始身分證與批次效期
+const parseVirtualId = (virtualId: string) => {
+  const parts = virtualId.split('__');
+  const defId = parts[0];
+  const exp = parts.length > 1 ? parts.slice(1).join('__') : 'empty';
+  return { defId, expiryDate: exp === 'empty' ? undefined : (exp === '無效期' ? '無效期' : exp) };
+};
+
 const App: React.FC = () => {
   const [defs, setDefs] = useState<InventoryDef[]>(() => {
     try {
@@ -105,7 +113,6 @@ const App: React.FC = () => {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [isAddingQuickShopping, setIsAddingQuickShopping] = useState(false);
 
-  // Global Confirmation Modal State
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -121,7 +128,6 @@ const App: React.FC = () => {
     onConfirm: () => { },
   });
 
-  // Global Event Listener for Alerts
   useEffect(() => {
     const handleShowAlert = (event: CustomEvent) => {
       setModalConfig({
@@ -148,51 +154,73 @@ const App: React.FC = () => {
     localStorage.setItem('homestock_recipe_tags', JSON.stringify(recipeTags));
   }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags]);
 
-  // View Switch Auto Scroll Top
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeView]);
 
+  // 🍎 核心重構：發派「虛擬身分證」，直接將不同批次轉換為獨立卡片
   const items: InventoryItem[] = useMemo(() => {
-    return defs.map(def => {
-      const itemLogs = transactions.filter(t => t.defId === def.id);
-      const totalQuantity = Math.max(0, itemLogs.reduce((acc, t) => acc + t.delta, 0));
-      const inputs = itemLogs.filter(t => t.delta > 0).sort((a, b) => (a.expiryDate || '9999').localeCompare(b.expiryDate || '9999'));
-      let totalConsumed = Math.abs(itemLogs.filter(t => t.delta < 0).reduce((acc, t) => acc + t.delta, 0));
+    const virtualItems: InventoryItem[] = [];
 
-      const activeBatches: InventoryBatch[] = [];
-      for (const input of inputs) {
-        if (totalConsumed <= 0) {
-          activeBatches.push({ expiryDate: input.expiryDate || '無效期', quantity: input.delta });
-        } else if (totalConsumed >= input.delta) {
-          totalConsumed -= input.delta;
-        } else {
-          activeBatches.push({ expiryDate: input.expiryDate || '無效期', quantity: input.delta - totalConsumed });
-          totalConsumed = 0;
-        }
-      }
+    defs.forEach(def => {
+      const itemLogs = transactions.filter(t => t.defId === def.id);
+      const batchGroups: Record<string, number> = {};
+      itemLogs.forEach(t => {
+        const exp = t.expiryDate || '無效期';
+        batchGroups[exp] = (batchGroups[exp] || 0) + t.delta;
+      });
 
       const lastUsed = itemLogs.filter(t => t.delta < 0).sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
       const lastPurchased = itemLogs.filter(t => t.delta > 0).sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
 
-      return {
-        id: def.id,
-        name: def.name,
-        quantity: totalQuantity,
-        category: def.category,
-        subCategory: def.subCategory,
-        location: def.defaultLocation,
-        openedDate: def.openedDate,
-        expiryDate: activeBatches[0]?.expiryDate === '無效期' ? undefined : activeBatches[0]?.expiryDate,
-        minThreshold: def.minThreshold,
-        batches: activeBatches,
-        review: def.review,
-        lastUsedDate: lastUsed?.timestamp.split('T')[0],
-        lastPurchasedDate: lastPurchased?.timestamp.split('T')[0],
-        packageSize: def.packageSize, // New field mapping
-        price: def.price // New field mapping
-      };
+      let hasBatches = false;
+      Object.entries(batchGroups).forEach(([exp, qty]) => {
+        if (qty > 0) {
+          hasBatches = true;
+          virtualItems.push({
+            id: `${def.id}__${exp}`, // 虛擬身分證
+            name: def.name,
+            quantity: qty,
+            category: def.category,
+            subCategory: def.subCategory,
+            location: def.defaultLocation,
+            openedDate: def.openedDate,
+            expiryDate: exp === '無效期' ? undefined : exp,
+            minThreshold: def.minThreshold,
+            batches: [], // 簡化：不再需要包裹
+            review: def.review,
+            lastUsedDate: lastUsed?.timestamp.split('T')[0],
+            lastPurchasedDate: lastPurchased?.timestamp.split('T')[0],
+            packageSize: def.packageSize,
+            price: def.price,
+            remarks: def.remarks
+          });
+        }
+      });
+
+      // 處理數量為 0 的空卡片
+      if (!hasBatches) {
+        virtualItems.push({
+          id: `${def.id}__empty`,
+          name: def.name,
+          quantity: 0,
+          category: def.category,
+          subCategory: def.subCategory,
+          location: def.defaultLocation,
+          openedDate: def.openedDate,
+          expiryDate: undefined,
+          minThreshold: def.minThreshold,
+          batches: [],
+          review: def.review,
+          lastUsedDate: lastUsed?.timestamp.split('T')[0],
+          lastPurchasedDate: lastPurchased?.timestamp.split('T')[0],
+          packageSize: def.packageSize,
+          price: def.price,
+          remarks: def.remarks
+        });
+      }
     });
+    return virtualItems;
   }, [defs, transactions]);
 
   const handleAddRecipe = (recipe: Recipe) => {
@@ -209,8 +237,6 @@ const App: React.FC = () => {
     setRecipes(prev => prev.map(r => r.id === updated.id ? updated : r));
   };
 
-  // --- Deletion Handlers with Confirmation ---
-
   const handleDeleteRecipe = (id: string) => {
     setModalConfig({
       isOpen: true,
@@ -223,13 +249,36 @@ const App: React.FC = () => {
     });
   };
 
-  const handleDeleteInventoryItem = (id: string) => {
+  // 🍎 升級的刪除邏輯：精準刪除虛擬卡片，不波及無辜
+  const handleDeleteInventoryItem = (virtualId: string) => {
     setModalConfig({
       isOpen: true,
-      title: '刪除物品',
-      message: '確定要刪除此物品嗎？所有相關的歷史紀錄與庫存都會被移除。',
+      title: '刪除卡片紀錄',
+      message: '確定要刪除這張卡片嗎？如果數量大於 0，將會先清空數量；如果數量已為 0，將永久移除此物品。',
       onConfirm: () => {
-        setDefs(prev => prev.filter(d => d.id !== id));
+        const { defId, expiryDate } = parseVirtualId(virtualId);
+
+        const itemLogs = transactions.filter(t => t.defId === defId);
+        const currentQty = itemLogs
+          .filter(t => (t.expiryDate || '無效期') === (expiryDate || '無效期'))
+          .reduce((acc, t) => acc + t.delta, 0);
+
+        if (expiryDate === undefined && virtualId.endsWith('__empty')) {
+          setDefs(prev => prev.filter(d => d.id !== defId));
+          setTransactions(prev => prev.filter(t => t.defId !== defId));
+        } else if (currentQty > 0) {
+          setTransactions(prev => [...prev, {
+            id: generateId(),
+            defId: defId,
+            type: 'adjust',
+            delta: -currentQty,
+            timestamp: new Date().toISOString(),
+            expiryDate: expiryDate === '無效期' ? undefined : expiryDate
+          }]);
+        } else {
+          setDefs(prev => prev.filter(d => d.id !== defId));
+          setTransactions(prev => prev.filter(t => t.defId !== defId));
+        }
         setModalConfig(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -252,7 +301,6 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
-  // --- Import Logic (Dual Track) ---
   const handleExcelImport = (newDefs: InventoryDef[], newTrans: InventoryTransaction[], newRecipes?: Recipe[]) => {
     setDefs(newDefs);
     setTransactions(newTrans);
@@ -261,7 +309,6 @@ const App: React.FC = () => {
 
   const handleSystemRestore = (backup: SystemBackup, mode: 'merge' | 'overwrite') => {
     const data = backup.data;
-
     if (mode === 'overwrite') {
       setDefs(data.defs || []);
       setTransactions(data.transactions || []);
@@ -308,61 +355,67 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Enhanced Logic: Update Item & Manage Shopping List ---
+  // 🍎 升級的修改邏輯：直達指令，不繞遠路
   const handleUpdateItem = (updated: InventoryItem, transactionType?: InventoryTransaction['type']) => {
     const timestamp = new Date().toISOString();
-    const current = items.find(i => i.id === updated.id);
+    const { defId, expiryDate: oldExpiry } = parseVirtualId(updated.id);
 
-    if (current) {
-      const delta = updated.quantity - current.quantity;
+    const currentDef = defs.find(d => d.id === defId);
+    if (!currentDef) return;
 
-      if (delta > 0) {
-        setShoppingList(prev => prev.filter(s => {
-          if (!s.isChecked) return true;
-          const shoppingName = s.name.trim().toLowerCase();
-          const inventoryName = updated.name.trim().toLowerCase();
-          if (shoppingName.includes(inventoryName)) {
-            return false;
-          }
-          return true;
-        }));
-      }
+    // 精準取得當前這張卡片的數量
+    const itemLogs = transactions.filter(t => t.defId === defId);
+    const currentQty = itemLogs
+      .filter(t => (t.expiryDate || '無效期') === (oldExpiry || '無效期'))
+      .reduce((acc, t) => acc + t.delta, 0);
 
-      if (delta !== 0) {
-        let type: InventoryTransaction['type'] = transactionType || (delta > 0 ? 'restock' : 'consume');
+    const delta = updated.quantity - currentQty;
 
-        setTransactions(prev => [...prev, {
-          id: generateId(),
-          defId: updated.id,
-          type: type,
-          delta: delta,
-          timestamp,
-          expiryDate: updated.expiryDate,
-        }]);
-      }
-      else if (updated.expiryDate !== current.expiryDate) {
-        setTransactions(prev => {
-          const itemTrans = prev.filter(t => t.defId === updated.id && t.delta > 0);
-          if (itemTrans.length === 0) return prev;
-          itemTrans.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
-          const latestTransId = itemTrans[0].id;
-          return prev.map(t => t.id === latestTransId ? { ...t, expiryDate: updated.expiryDate } : t);
-        });
-      }
-
-      setDefs(prev => prev.map(d => d.id === updated.id ? {
-        ...d,
-        name: updated.name,
-        category: updated.category,
-        subCategory: updated.subCategory,
-        defaultLocation: updated.location,
-        minThreshold: updated.minThreshold,
-        review: updated.review,
-        openedDate: updated.openedDate,
-        packageSize: updated.packageSize, // Update new field
-        price: updated.price // Update new field
-      } : d));
+    if (delta > 0) {
+      setShoppingList(prev => prev.filter(s => {
+        if (!s.isChecked) return true;
+        return !s.name.trim().toLowerCase().includes(updated.name.trim().toLowerCase());
+      }));
     }
+
+    if (delta !== 0) {
+      setTransactions(prev => [...prev, {
+        id: generateId(),
+        defId: defId,
+        type: transactionType || (delta > 0 ? 'restock' : 'consume'),
+        delta: delta,
+        timestamp,
+        // 消耗記在舊效期上，入庫記在新效期上
+        expiryDate: delta < 0 ? (oldExpiry === '無效期' ? undefined : oldExpiry) : updated.expiryDate,
+      }]);
+    }
+
+    const newExpiryStr = updated.expiryDate || '無效期';
+    const oldExpiryStr = oldExpiry || '無效期';
+
+    // 如果效期被修改，把流水帳裡的標記一起改掉
+    if (newExpiryStr !== oldExpiryStr) {
+      setTransactions(prev => prev.map(t =>
+        (t.defId === defId && (t.expiryDate || '無效期') === oldExpiryStr)
+          ? { ...t, expiryDate: updated.expiryDate }
+          : t
+      ));
+    }
+
+    // 確立「共用屬性」連動：更新這個身分證的所有共通資料
+    setDefs(prev => prev.map(d => d.id === defId ? {
+      ...d,
+      name: updated.name,
+      category: updated.category,
+      subCategory: updated.subCategory,
+      defaultLocation: updated.location,
+      minThreshold: updated.minThreshold,
+      review: updated.review,
+      openedDate: updated.openedDate,
+      packageSize: updated.packageSize,
+      price: updated.price,
+      remarks: updated.remarks
+    } : d));
   };
 
   const handleHeaderAddClick = () => {
@@ -391,19 +444,13 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen pb-24 flex flex-col items-center text-slate-900 relative overflow-hidden bg-[#F2F2F7]">
 
-      {/* 🌟 蘋果動態環境光 (Ambient Glow Background) - 這是毛玻璃立體感的靈魂！ */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
-        {/* 右上角：科技藍光 */}
         <div className="absolute top-[-5%] right-[-10%] w-[350px] h-[350px] rounded-full bg-blue-500/15 blur-[80px]"></div>
-        {/* 左中側：薄荷綠光 */}
         <div className="absolute top-[25%] left-[-15%] w-[300px] h-[300px] rounded-full bg-emerald-400/15 blur-[100px]"></div>
-        {/* 右下角：柔和紫光 */}
         <div className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-purple-400/15 blur-[120px]"></div>
       </div>
 
-      {/* 確保所有內容都在環境光之上 */}
       <div className="relative z-10 w-full flex flex-col items-center">
-        {/* 🌟 頂部 Header 升級：毛玻璃、細亮邊、果凍按鈕與粗體圖示 */}
         <header className="w-full max-w-2xl px-4 py-3 flex justify-between items-center bg-white/60 backdrop-blur-[40px] backdrop-saturate-150 sticky top-0 z-40 border-b border-white shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
           <button
             onClick={() => setActiveView('analysis')}
@@ -437,7 +484,6 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* 內容區塊 */}
         <main className="w-full max-w-2xl px-4 py-6">
           {activeView === 'dashboard' && (
             <Dashboard
@@ -523,7 +569,8 @@ const App: React.FC = () => {
               existingItems={items}
               onAdd={(item, stay) => {
                 if (editingItem && editingItem.id) {
-                  handleUpdateItem({ ...item, id: editingItem.id, batches: editingItem.batches });
+                  // 因為編輯的是虛擬身分證卡片，id 本身就是對位的指標
+                  handleUpdateItem({ ...item, id: editingItem.id } as any);
                 } else {
                   const existingDef = defs.find(d =>
                     d.name.trim() === item.name.trim() &&

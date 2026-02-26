@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { InventoryItem, ShoppingItem, AppSettings, InventoryBatch } from '../types';
+import { InventoryItem, ShoppingItem, AppSettings } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 
 interface InventoryListProps {
@@ -16,7 +16,7 @@ interface InventoryListProps {
 }
 
 interface QuickAdjust {
-  item: GroupedInventoryItem;
+  item: InventoryItem;
   mode: 'add' | 'subtract';
 }
 
@@ -24,12 +24,8 @@ interface BatchEditState {
   type: 'category' | 'location' | null;
 }
 
-interface GroupedInventoryItem extends InventoryItem {
-  subItems: InventoryItem[];
-}
-
 const InventoryItemCard: React.FC<{
-  item: GroupedInventoryItem;
+  item: InventoryItem;
   isExpanded: boolean;
   selectedIds: Set<string>;
   isBatchMode: boolean;
@@ -44,7 +40,7 @@ const InventoryItemCard: React.FC<{
   onDeleteRequest: (id: string) => void;
   onAddToShopping: (name: string, category: string) => void;
   onUpdate: (item: InventoryItem) => void;
-  onConsumeRequest: (item: GroupedInventoryItem) => void;
+  onConsumeRequest: (item: InventoryItem) => void;
   isActiveSwipe?: boolean;
   onSwipeStart?: () => void;
 }> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, isActiveSwipe, onSwipeStart }) => {
@@ -53,7 +49,6 @@ const InventoryItemCard: React.FC<{
   const startX = useRef(0);
   const threshold = 70;
 
-  // 監聽外部狀態，自動縮回
   useEffect(() => {
     if (!isActiveSwipe) {
       setOffsetX(0);
@@ -90,13 +85,12 @@ const InventoryItemCard: React.FC<{
     }
   };
 
-  const handleOpenItem = (e: React.MouseEvent, item: GroupedInventoryItem) => {
+  const handleOpenItem = (e: React.MouseEvent, item: InventoryItem) => {
     e.stopPropagation();
     const today = new Date().toISOString().split('T')[0];
-    onUpdate({ ...item.subItems[0], openedDate: today });
+    onUpdate({ ...item, openedDate: today });
   };
 
-  // 🍎 統一的效期標籤：極簡扁平化
   const getExpiryBadge = (expiryDate?: string) => {
     if (!expiryDate) return null;
     const today = new Date().setHours(0, 0, 0, 0);
@@ -125,11 +119,10 @@ const InventoryItemCard: React.FC<{
 
   const isInShoppingList = shoppingList.some(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
 
-  // 🍎 Review Mode: 去除重複外框，直接使用與一般模式相同的內層樣式
   if (viewMode === 'review') {
     return (
       <div
-        onClick={(e) => { e.stopPropagation(); onEdit(item.subItems[0]); }}
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
         className="transition-all duration-300 relative z-10 cursor-pointer hover:bg-white/30 p-5 h-full"
       >
         <div className="flex justify-between items-start mb-2">
@@ -154,9 +147,7 @@ const InventoryItemCard: React.FC<{
           className={`absolute inset-0 bg-[#FF3B30] flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
           onClick={(e) => {
             e.stopPropagation();
-            if (item.subItems.length > 0) {
-              onDeleteRequest(item.subItems[0].id);
-            }
+            onDeleteRequest(item.id);
             setOffsetX(0);
             setSwipedOpen(false);
           }}
@@ -169,7 +160,6 @@ const InventoryItemCard: React.FC<{
       )}
 
       <div
-        // 🍎 主卡片內層：背景透明，依靠外層的漸層，僅透過 hover 顯示交互感
         className={`transition-all duration-300 relative z-10 cursor-pointer select-none ${(selectedIds.has(item.id) || isExpanded) ? 'bg-white/50' : 'hover:bg-white/30'} p-5 h-full`}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
@@ -204,7 +194,6 @@ const InventoryItemCard: React.FC<{
             </div>
 
             <div className="flex items-center flex-wrap gap-2 mt-2.5">
-              {/* 🍎 極簡標籤：移除 border 與 shadow */}
               <span className="text-[10px] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-black whitespace-nowrap tracking-widest">
                 {item.category}
                 {item.subCategory ? ` · ${item.subCategory}` : ''}
@@ -219,6 +208,13 @@ const InventoryItemCard: React.FC<{
               {item.packageSize && (
                 <span className="text-[10px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black whitespace-nowrap tracking-widest">
                   {item.packageSize}
+                </span>
+              )}
+
+              {/* 🍎 單價移至此處，與容量相同風格 */}
+              {item.price && item.price > 0 && (
+                <span className="text-[10px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black whitespace-nowrap tracking-widest">
+                  ${item.price}
                 </span>
               )}
 
@@ -241,33 +237,12 @@ const InventoryItemCard: React.FC<{
 
         {isExpanded && (
           <div className="animate-in slide-in-from-top-2 duration-200">
-            {item.batches.length > 0 && item.quantity > 0 && (
-              // 🍎 內部區域背景：平整的凹槽感
-              <div className={`mt-4 bg-white/50 rounded-[20px] p-3 space-y-1.5 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] ${isBatchMode ? 'ml-8' : ''}`}>
-                <div className="flex justify-between items-center px-1 mb-1.5">
-                  <p className="text-[10px] text-slate-400 font-black tracking-widest uppercase">批次庫存</p>
-                </div>
-                {item.batches.map((batch, idx) => (
-                  <div key={idx} className="flex justify-between items-center text-xs font-bold text-slate-600 px-1">
-                    <span className={batch.expiryDate === '無效期' ? 'text-slate-400' : ''}>
-                      {batch.expiryDate}
-                    </span>
-                    <span className="font-black text-slate-800">
-                      x{batch.quantity}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {(item.expiryDate || item.openedDate || item.remarks || item.lastUsedDate || item.lastPurchasedDate || item.price) && (
+            {/* 🍎 移除「批次庫存」區塊，直接顯示底部詳細資訊 */}
+            {(item.expiryDate || item.openedDate || item.remarks || item.lastUsedDate || item.lastPurchasedDate) && (
               <div className={`mt-4 pt-4 mb-1 border-t border-white/40 flex flex-wrap gap-x-5 gap-y-3 text-[11px] font-bold text-slate-500 ${isBatchMode ? 'pl-8' : ''}`}>
-                {item.price && item.price > 0 && (
-                  <div className="flex items-center gap-1.5 text-[#007AFF]">
-                    <span className="text-slate-400 tracking-wider">單價:</span> ${item.price}
-                  </div>
-                )}
-                {item.expiryDate && item.batches.length <= 1 && (
+                {/* 🍎 單價已移至上方標籤區 */}
+                {/* 🍎 效期改為與其他資訊並排，無條件顯示 */}
+                {item.expiryDate && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-slate-400 tracking-wider">效期:</span> {item.expiryDate}
                   </div>
@@ -301,7 +276,7 @@ const InventoryItemCard: React.FC<{
           <div className={`flex justify-between items-center mt-4 pt-3 border-t border-white/40 ${isExpanded ? '' : 'pt-3'}`}>
             <div className="flex items-center gap-1">
               <button
-                onClick={(e) => { e.stopPropagation(); onEdit(item.subItems[0]); }}
+                onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                 className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white transition-all rounded-full"
                 title="編輯"
               >
@@ -309,7 +284,7 @@ const InventoryItemCard: React.FC<{
               </button>
 
               <button
-                onClick={(e) => { e.stopPropagation(); onDuplicate(item.subItems[0]); }}
+                onClick={(e) => { e.stopPropagation(); onDuplicate(item); }}
                 className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white transition-all rounded-full"
                 title="複製"
               >
@@ -359,7 +334,7 @@ const InventoryItemCard: React.FC<{
 
               {item.quantity > 0 && (
                 <button
-                  onClick={(e) => { e.stopPropagation(); onScrapRequest(item.subItems[0]); }}
+                  onClick={(e) => { e.stopPropagation(); onScrapRequest(item); }}
                   className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all rounded-full"
                   title="報廢"
                 >
@@ -462,73 +437,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     });
   };
 
-  const groupedItems: GroupedInventoryItem[] = useMemo(() => {
-    const groups: Record<string, GroupedInventoryItem> = {};
-
-    props.items.forEach(item => {
-      const key = item.name.trim();
-      if (!groups[key]) {
-        groups[key] = {
-          ...item,
-          subItems: [item],
-          batches: item.batches ? [...item.batches] : []
-        };
-      } else {
-        const group = groups[key];
-        group.subItems.push(item);
-        group.quantity += item.quantity;
-
-        if (item.batches) {
-          group.batches.push(...item.batches);
-        } else if (item.quantity > 0) {
-          group.batches.push({ expiryDate: item.expiryDate || '無效期', quantity: item.quantity });
-        }
-
-        if (item.expiryDate) {
-          if (!group.expiryDate || item.expiryDate < group.expiryDate) {
-            group.expiryDate = item.expiryDate;
-          }
-        }
-
-        if (item.lastPurchasedDate) {
-          if (!group.lastPurchasedDate || item.lastPurchasedDate > group.lastPurchasedDate) {
-            group.lastPurchasedDate = item.lastPurchasedDate;
-          }
-        }
-
-        if (item.location && !group.location.includes(item.location)) {
-          group.location = group.location ? `${group.location}, ${item.location}` : item.location;
-        }
-      }
-    });
-
-    return Object.values(groups).map(g => {
-      const batchMap = new Map<string, number>();
-      g.batches.forEach(b => {
-        const date = b.expiryDate || '無效期';
-        batchMap.set(date, (batchMap.get(date) || 0) + b.quantity);
-      });
-
-      const mergedBatches = Array.from(batchMap.entries()).map(([date, qty]) => ({
-        expiryDate: date,
-        quantity: qty
-      }));
-
-      mergedBatches.sort((a, b) => {
-        if (a.expiryDate === '無效期') return 1;
-        if (b.expiryDate === '無效期') return -1;
-        return a.expiryDate.localeCompare(b.expiryDate);
-      });
-
-      g.batches = mergedBatches;
-
-      const nearest = mergedBatches.find(b => b.expiryDate !== '無效期');
-      g.expiryDate = nearest ? nearest.expiryDate : undefined;
-
-      return g;
-    });
-  }, [props.items]);
-
   const availableStructure = useMemo(() => {
     const map = new Map<string, Set<string>>();
     props.categories.forEach(c => map.set(c, new Set()));
@@ -549,16 +457,16 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
 
     props.categories.forEach(c => counts[c] = 0);
 
-    groupedItems.forEach(item => {
+    props.items.forEach(item => {
       counts[item.category] = (counts[item.category] || 0) + 1;
       if (item.subCategory) {
         subCounts[item.subCategory] = (subCounts[item.subCategory] || 0) + 1;
       }
     });
     return { cats: counts, subs: subCounts };
-  }, [groupedItems, props.categories]);
+  }, [props.items, props.categories]);
 
-  const filteredItems = groupedItems.filter(item => {
+  const filteredItems = props.items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.location.toLowerCase().includes(search.toLowerCase());
 
@@ -633,29 +541,12 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     };
   }, [search, props.items]);
 
-  const handleAdjustQuantity = (item: GroupedInventoryItem, delta: number) => {
-    if (delta > 0) {
-      const sorted = [...item.subItems].sort((a, b) => {
-        const d1 = a.expiryDate || '9999-99-99';
-        const d2 = b.expiryDate || '9999-99-99';
-        return d2.localeCompare(d1);
-      });
-      const target = sorted[0];
-      props.onUpdate({ ...target, quantity: target.quantity + delta });
-    } else {
-      const sorted = [...item.subItems].sort((a, b) => {
-        const d1 = a.expiryDate || '9999-99-99';
-        const d2 = b.expiryDate || '9999-99-99';
-        return d1.localeCompare(d2);
-      });
-      const target = sorted.find(i => i.quantity > 0);
-      if (target) {
-        const newQty = Math.max(0, target.quantity + delta);
-        const updates: any = { quantity: newQty };
-        if (delta < 0) updates.lastUsedDate = new Date().toISOString().split('T')[0];
-        props.onUpdate({ ...target, ...updates });
-      }
-    }
+  // 🍎 簡化版的調整數量邏輯：直達指令
+  const handleAdjustQuantity = (item: InventoryItem, delta: number) => {
+    const newTotalQty = Math.max(0, item.quantity + delta);
+    const updates: any = { quantity: newTotalQty };
+    if (delta < 0) updates.lastUsedDate = new Date().toISOString().split('T')[0];
+    props.onUpdate({ ...item, ...updates });
   };
 
   const handleApplyQuickAdjust = () => {
@@ -682,11 +573,9 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     if (!batchEditModal.type || !batchTargetValue) return;
 
     selectedIds.forEach(id => {
-      const group = groupedItems.find(i => i.id === id);
-      if (group) {
-        group.subItems.forEach(sub => {
-          props.onUpdate({ ...sub, [batchEditModal.type!]: batchTargetValue });
-        });
+      const item = props.items.find(i => i.id === id);
+      if (item) {
+        props.onUpdate({ ...item, [batchEditModal.type!]: batchTargetValue });
       }
     });
 
@@ -701,7 +590,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     setSelectedIds(new Set());
   };
 
-  const requestConsume = (item: GroupedInventoryItem) => {
+  const requestConsume = (item: InventoryItem) => {
     setConfirmConfig({
       isOpen: true,
       title: '確認消耗',
@@ -717,7 +606,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     setConfirmConfig({
       isOpen: true,
       title: '確認報廢',
-      message: `確定要報廢「${item.name}」嗎？這將會把數量歸零並記錄為浪費。`,
+      message: `確定要報廢這張「${item.name}」的卡片嗎？這將會把數量歸零並記錄為浪費。`,
       onConfirm: () => {
         props.onScrap(item);
         setConfirmConfig(prev => ({ ...prev, isOpen: false }));
@@ -725,17 +614,10 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     });
   };
 
-  const requestDelete = (id: string) => {
-    // 移除重複的彈窗，直接交給外層 (App.tsx) 的詳細彈窗處理
-    props.onDelete(id);
-  };
-
   return (
     <div className="-mt-6 space-y-0 pb-24">
-      {/* 1. iOS 26 頂部搜尋與工具列 (懸浮毛玻璃) */}
       <div className="sticky top-0 bg-white/60 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/40 shadow-[0_4px_20px_rgba(0,0,0,0.02)] -mx-4 px-4 h-16 flex items-center gap-3">
 
-        {/* 搜尋框：全圓角膠囊 */}
         <div className="relative flex-1 h-11 group">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
           <input
@@ -746,7 +628,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
             onChange={(e) => setSearch(e.target.value)}
           />
 
-          {/* 篩選按鈕 */}
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-95 ${isFilterOpen || activeFilterCount > 0
@@ -760,7 +641,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
             )}
           </button>
 
-          {/* 篩選下拉選單：32px 大圓角毛玻璃 */}
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
@@ -846,7 +726,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           )}
         </div>
 
-        {/* 批次修改按鈕：膠囊圓鈕 */}
         <button
           onClick={() => setIsBatchMode(!isBatchMode)}
           className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border ${isBatchMode
@@ -858,7 +737,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
         </button>
 
-        {/* 檢視設定按鈕：膠囊圓鈕 */}
         <button
           onClick={() => setIsFilterMenuOpen(true)}
           className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border ${(!hideOutOfStock || sortOrder !== 'default' || viewMode === 'review')
@@ -901,7 +779,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           </div>
         ) : (
           sortedItems.map(item => (
-            // 🍎 主卡片外層：統一套用 Apple 頂級玻璃魔法
             <div key={item.id} className="mb-4 rounded-[32px] border border-white/40 shadow-[0_12px_32px_rgba(0,0,0,0.05),inset_0_2px_2px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(255,255,255,0.2)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
               <InventoryItemCard
                 item={item}
@@ -916,7 +793,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                 onEdit={props.onEdit}
                 onDuplicate={props.onDuplicate}
                 onScrapRequest={requestScrap}
-                onDeleteRequest={requestDelete}
+                onDeleteRequest={props.onDelete}
                 onAddToShopping={props.onAddToShopping}
                 onUpdate={props.onUpdate}
                 onConsumeRequest={requestConsume}

@@ -10,9 +10,10 @@ export interface InventoryDef {
   image?: string;
   createdDate: string;
   review?: string;
-  openedDate?: string; 
+  openedDate?: string;
   packageSize?: string; // Renamed concept from remarks for specs (e.g., "500ml")
-  price?: number; // New: Purchase price per unit
+  price?: number;
+  remarks?: string; // 🍎 補上這一行
 }
 
 export interface InventoryTransaction {
@@ -63,7 +64,7 @@ export interface ShoppingItem {
 export interface Recipe {
   id: string;
   name: string;
-  ingredients: string[]; 
+  ingredients: string[];
   steps: string;
   tags: string[]; // Merged tags (cuisine, dishType, attributes)
   createdDate: string;

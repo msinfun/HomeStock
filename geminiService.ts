@@ -15,7 +15,7 @@ function getGeminiClient(): GoogleGenAI {
 function handleApiError(error: any) {
   console.error("Gemini API Error:", error);
   const errString = error.toString().toLowerCase();
-  
+
   let title = "AI 請求失敗";
   let message = "發生未預期的錯誤，請稍後再試。";
 
@@ -28,8 +28,8 @@ function handleApiError(error: any) {
   }
 
   // Dispatch custom event for UI to pick up
-  window.dispatchEvent(new CustomEvent('show-alert', { 
-    detail: { title, message } 
+  window.dispatchEvent(new CustomEvent('show-alert', {
+    detail: { title, message }
   }));
 }
 
@@ -37,7 +37,7 @@ function handleApiError(error: any) {
 function cleanTags(tags: string[], allowed: string[]): string[] {
   if (!tags || !Array.isArray(tags)) return [];
   if (!allowed || allowed.length === 0) return [];
-  
+
   const allowedSet = new Set(allowed);
   // Filter tags that exactly match the allowed list
   return tags.filter(t => allowedSet.has(t));
@@ -49,7 +49,7 @@ const COMMON_PROMPT_RULES = `
   2. **name (名稱)**：保留 brand、系列。
   3. **subCategory (小分類)**：物品本體名稱。
   4. **packageSize (包裝容量/規格)**：從名稱或圖片中提取容量、重量。
-  5. **price (價格)**：提取標價；若無則回傳 0。
+  5. **price (單價)**：提取單價數字。如果發票或圖片上僅有「總價」與「數量」，請務必自行計算「總價 ÷ 數量 = 單價」並回傳此單價數字；若完全無價格資訊則回傳 0。
   6. **category (大分類)**：僅限 ['食品', '雜貨', '藥品', '盥洗用品', '電子產品', '其他']。
 `;
 
@@ -179,47 +179,17 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
 }
 
 export async function recognizeItemFromImage(base64Images: string[], context: any) {
-    try {
-      const ai = getGeminiClient();
-      const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { parts: [...imageParts, { text: `辨識圖片物品清單。${COMMON_PROMPT_RULES}` }] },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING },
-                quantity: { type: Type.NUMBER },
-                category: { type: Type.STRING },
-                subCategory: { type: Type.STRING },
-                location: { type: Type.STRING },
-                expiryDate: { type: Type.STRING },
-                packageSize: { type: Type.STRING },
-                price: { type: Type.NUMBER },
-                remarks: { type: Type.STRING } 
-              },
-              required: ["name", "quantity", "category", "subCategory"]
-            }
-          }
-        }
-      });
-      return JSON.parse(response.text || "[]");
-    } catch (error) { handleApiError(error); return []; }
-}
-
-export async function inferItemDetailsFromText(itemName: string, context: any) {
-    try {
-      const ai = getGeminiClient();
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { parts: [{ text: `推斷物品屬性：${itemName}。${COMMON_PROMPT_RULES}` }] },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
+  try {
+    const ai = getGeminiClient();
+    const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [...imageParts, { text: `辨識圖片物品清單。${COMMON_PROMPT_RULES}` }] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
             type: Type.OBJECT,
             properties: {
               name: { type: Type.STRING },
@@ -227,118 +197,153 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
               category: { type: Type.STRING },
               subCategory: { type: Type.STRING },
               location: { type: Type.STRING },
+              expiryDate: { type: Type.STRING },
               packageSize: { type: Type.STRING },
+              price: { type: Type.NUMBER },
               remarks: { type: Type.STRING }
             },
-            required: ["category", "subCategory", "quantity"]
+            required: ["name", "quantity", "category", "subCategory"]
           }
         }
-      });
-      return JSON.parse(response.text || "{}");
-    } catch (error) { handleApiError(error); return {}; }
+      }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch (error) { handleApiError(error); return []; }
+}
+
+export async function inferItemDetailsFromText(itemName: string, context: any) {
+  try {
+    const ai = getGeminiClient();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [{ text: `推斷物品屬性：${itemName}。${COMMON_PROMPT_RULES}` }] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            name: { type: Type.STRING },
+            quantity: { type: Type.NUMBER },
+            category: { type: Type.STRING },
+            subCategory: { type: Type.STRING },
+            location: { type: Type.STRING },
+            packageSize: { type: Type.STRING },
+            remarks: { type: Type.STRING }
+          },
+          required: ["category", "subCategory", "quantity"]
+        }
+      }
+    });
+    return JSON.parse(response.text || "{}");
+  } catch (error) { handleApiError(error); return {}; }
 }
 
 export async function recognizeExpiryDate(base64Image: string): Promise<string | null> {
-    try {
-      const ai = getGeminiClient();
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { parts: [{ inlineData: { data: base64Image, mimeType: "image/jpeg" } }, { text: "辨識效期 YYYY-MM-DD。若無則回傳空字串。" }] },
-        config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { expiryDate: { type: Type.STRING } } } }
-      });
-      const res = JSON.parse(response.text || "{}");
-      return res.expiryDate || "";
-    } catch (error) { handleApiError(error); return null; }
+  try {
+    const ai = getGeminiClient();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [{ inlineData: { data: base64Image, mimeType: "image/jpeg" } }, { text: "辨識效期 YYYY-MM-DD。若無則回傳空字串。" }] },
+      config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { expiryDate: { type: Type.STRING } } } }
+    });
+    const res = JSON.parse(response.text || "{}");
+    return res.expiryDate || "";
+  } catch (error) { handleApiError(error); return null; }
 }
 
 export async function recognizeRecipeFromImage(base64Image: string, availableTags: string[] = []) {
-    try {
-      const ai = getGeminiClient();
-      const tagList = availableTags.join(', ');
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { 
-          parts: [
-            { inlineData: { data: base64Image, mimeType: "image/jpeg" } }, 
-            { text: `Extract recipe data. ${RECIPE_STRICT_PROMPT}
+  try {
+    const ai = getGeminiClient();
+    const tagList = availableTags.join(', ');
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [
+          { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
+          {
+            text: `Extract recipe data. ${RECIPE_STRICT_PROMPT}
               **[STRICT TAGGING RULES]**
               1. You must select tags ONLY from this specific list: [${tagList}].
               2. Do NOT invent, translate, or create new tags.
               3. If no tag from the list applies, return an empty array for tags.
-            `} 
-          ] 
-        },
-        config: { responseMimeType: "application/json", responseSchema: RECIPE_SCHEMA }
-      });
-      
-      const result = JSON.parse(response.text || "{}");
-      if (Array.isArray(result.steps)) result.steps = result.steps.join('\n');
-      
-      // Post-Processing: Strict Filter
-      result.tags = cleanTags(result.tags, availableTags);
-      
-      return result;
-    } catch (error) { handleApiError(error); return null; }
+            `}
+        ]
+      },
+      config: { responseMimeType: "application/json", responseSchema: RECIPE_SCHEMA }
+    });
+
+    const result = JSON.parse(response.text || "{}");
+    if (Array.isArray(result.steps)) result.steps = result.steps.join('\n');
+
+    // Post-Processing: Strict Filter
+    result.tags = cleanTags(result.tags, availableTags);
+
+    return result;
+  } catch (error) { handleApiError(error); return null; }
 }
 
 export async function recognizeRecipeFromText(text: string, availableTags: string[] = []) {
-    try {
-      const ai = getGeminiClient();
-      const tagList = availableTags.join(', ');
+  try {
+    const ai = getGeminiClient();
+    const tagList = availableTags.join(', ');
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { 
-          parts: [{ text: `Extract recipe data from: ${text}. ${RECIPE_STRICT_PROMPT}
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [{
+          text: `Extract recipe data from: ${text}. ${RECIPE_STRICT_PROMPT}
             **[STRICT TAGGING RULES]**
             1. You must select tags ONLY from this specific list: [${tagList}].
             2. Do NOT invent, translate, or create new tags.
             3. If no tag from the list applies, return an empty array for tags.
-          `}] 
-        },
-        config: { responseMimeType: "application/json", responseSchema: RECIPE_SCHEMA }
-      });
-      
-      const result = JSON.parse(response.text || "{}");
-      if (Array.isArray(result.steps)) result.steps = result.steps.join('\n');
-      
-      // Post-Processing: Strict Filter
-      result.tags = cleanTags(result.tags, availableTags);
+          `}]
+      },
+      config: { responseMimeType: "application/json", responseSchema: RECIPE_SCHEMA }
+    });
 
-      return result;
-    } catch (error) { handleApiError(error); return null; }
+    const result = JSON.parse(response.text || "{}");
+    if (Array.isArray(result.steps)) result.steps = result.steps.join('\n');
+
+    // Post-Processing: Strict Filter
+    result.tags = cleanTags(result.tags, availableTags);
+
+    return result;
+  } catch (error) { handleApiError(error); return null; }
 }
 
 export async function inferRecipeTagsFromTitle(dishName: string, availableTags: string[] = []) {
-    try {
-      const ai = getGeminiClient();
-      const tagList = availableTags.join(', ');
+  try {
+    const ai = getGeminiClient();
+    const tagList = availableTags.join(', ');
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: { parts: [{ text: `
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: {
+        parts: [{
+          text: `
           推測「${dishName}」的標籤。
           **[STRICT TAGGING RULES]**
           1. You must select tags ONLY from this specific list: [${tagList}].
           2. Do NOT invent, translate, or create new tags.
           3. If no tag from the list applies, return an empty array.
-        ` }] },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } },
-            required: ["tags"]
-          }
+        ` }]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: { tags: { type: Type.ARRAY, items: { type: Type.STRING } } },
+          required: ["tags"]
         }
-      });
-      
-      const result = JSON.parse(response.text || "{}");
-      
-      // Post-Processing: Strict Filter
-      result.tags = cleanTags(result.tags, availableTags);
+      }
+    });
 
-      return result;
-    } catch (error) { handleApiError(error); return null; }
+    const result = JSON.parse(response.text || "{}");
+
+    // Post-Processing: Strict Filter
+    result.tags = cleanTags(result.tags, availableTags);
+
+    return result;
+  } catch (error) { handleApiError(error); return null; }
 }

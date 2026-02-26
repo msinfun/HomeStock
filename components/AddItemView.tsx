@@ -88,6 +88,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         price: data.price || 0,
         minThreshold: data.minThreshold ?? 0,
         lastUsedDate: data.lastUsedDate ?? '',
+        remarks: data.remarks || '', // 🍎 修復：明確把舊的備註載入表單
         review: data.review ?? ''
       });
       setHasManuallySetCategory(true);
@@ -433,8 +434,12 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <input
               type="number"
               className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 text-center"
-              value={form.quantity}
-              onChange={e => setForm({ ...form, quantity: parseInt(e.target.value) || 0 })}
+              value={form.quantity === '' as any ? '' : form.quantity}
+              onChange={e => {
+                const val = e.target.value;
+                setForm({ ...form, quantity: val === '' ? ('' as any) : parseInt(val) });
+              }}
+              onWheel={e => e.currentTarget.blur()} // 🍎 防止滾輪誤觸改變數字
             />
           </div>
           <div className="space-y-1.5">
@@ -442,9 +447,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <input
               type="number"
               className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center"
-              value={form.minThreshold}
-              onChange={e => setForm({ ...form, minThreshold: parseInt(e.target.value) || 0 })}
+              value={form.minThreshold === '' as any ? '' : form.minThreshold}
+              onChange={e => {
+                const val = e.target.value;
+                setForm({ ...form, minThreshold: val === '' ? ('' as any) : parseInt(val) });
+              }}
               placeholder="警戒值"
+              onWheel={e => e.currentTarget.blur()} // 🍎 防止滾輪誤觸改變數字
             />
           </div>
         </div>
@@ -467,9 +476,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <input
                 type="number"
                 className="w-full pl-9 pr-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300"
-                value={form.price || ''}
-                onChange={e => setForm({ ...form, price: parseFloat(e.target.value) || 0 })}
+                value={form.price === '' as any ? '' : (form.price ?? '')}
+                onChange={e => {
+                  const val = e.target.value;
+                  setForm({ ...form, price: val === '' ? ('' as any) : parseFloat(val) });
+                }}
                 placeholder="0"
+                onWheel={e => e.currentTarget.blur()} // 🍎 防止滾輪誤觸改變數字
               />
             </div>
           </div>
