@@ -556,7 +556,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             </div>
             <input
               type="date"
-              className="w-full min-w-0 appearance-none px-3 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[15px]"
+              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[14px] text-center"
               value={form.expiryDate}
               onChange={e => setForm({ ...form, expiryDate: e.target.value })}
             />
@@ -574,7 +574,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             </div>
             <input
               type="date"
-              className="w-full min-w-0 appearance-none px-3 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[15px]"
+              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[14px] text-center"
               value={form.openedDate}
               onChange={e => setForm({ ...form, openedDate: e.target.value })}
             />

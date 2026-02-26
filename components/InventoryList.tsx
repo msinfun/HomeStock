@@ -212,7 +212,7 @@ const InventoryItemCard: React.FC<{
               )}
 
               {/* 🍎 單價移至此處，與容量相同風格 */}
-              {item.price && item.price > 0 && (
+              {(item.price ?? 0) > 0 && (
                 <span className="text-[10px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black whitespace-nowrap tracking-widest">
                   ${item.price}
                 </span>
