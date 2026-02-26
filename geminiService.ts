@@ -43,15 +43,20 @@ function cleanTags(tags: string[], allowed: string[]): string[] {
   return tags.filter(t => allowedSet.has(t));
 }
 
-const COMMON_PROMPT_RULES = `
+// 🍎 改為動態接收現有分類的函數
+const getCommonPromptRules = (categories: string[]) => {
+  const catString = categories.length > 0 ? categories.join("', '") : "食品', '雜貨', '藥品', '盥洗用品', '電子產品', '其他";
+  return `
   **[嚴格 JSON 輸出模式 - 效能優化]**
   1. 請直接回傳 JSON 格式，不要包含 Markdown 標記 (如 \`\`\`json) 或任何解釋文字。
   2. **name (名稱)**：保留 brand、系列。
   3. **subCategory (小分類)**：物品本體名稱。
   4. **packageSize (包裝容量/規格)**：從名稱或圖片中提取容量、重量。
-  5. **price (單價)**：提取單價數字。如果發票或圖片上僅有「總價」與「數量」，請務必自行計算「總價 ÷ 數量 = 單價」並回傳此單價數字；若完全無價格資訊則回傳 0。
-  6. **category (大分類)**：僅限 ['食品', '雜貨', '藥品', '盥洗用品', '電子產品', '其他']。
+  5. **price (單價)**：提取單價數字。如果發票或圖片上僅有「總價」與「數量」，請務必自行計算「總價 ÷ 數量 = 單價」並回傳此單價數字；若無價格則回傳 0。
+  6. **expiryDate (有效期限)**：極度仔細尋找包裝上的效期 (EXP, Best Before)。若有找到，統一轉換為 YYYY-MM-DD 格式；若無則回傳空字串。
+  7. **category (大分類)**：請務必優先從現有類別 ['${catString}'] 中挑選最適合的。
 `;
+};
 
 const RECIPE_STRICT_PROMPT = `
   **[嚴格資料提取規則]**
@@ -184,7 +189,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: { parts: [...imageParts, { text: `辨識圖片物品清單。${COMMON_PROMPT_RULES}` }] },
+      contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [])}` }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -216,7 +221,7 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: { parts: [{ text: `推斷物品屬性：${itemName}。${COMMON_PROMPT_RULES}` }] },
+      contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [])}` }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
