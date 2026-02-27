@@ -105,6 +105,7 @@ const RecipeCard: React.FC<{
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps' | 'review'>('ingredients');
   const [costBreakdownExpanded, setCostBreakdownExpanded] = useState(false);
+  const [scaleEditModal, setScaleEditModal] = useState(false);
 
   // Focused Cooking Mode State
   const [isCookingMode, setIsCookingMode] = useState(false);
@@ -545,22 +546,13 @@ const RecipeCard: React.FC<{
                     {val}x
                   </button>
                 ))}
-                <div className="relative h-9 w-16">
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0.1"
-                    className="w-full h-full pl-2 pr-5 text-xs font-black tracking-widest text-center bg-slate-100 rounded-full focus:bg-white -[#007AFF]/20 transition-all text-slate-700 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-                    value={scaleFactor}
-                    onWheel={e => e.currentTarget.blur()}
-                    onChange={(e) => {
-                      const val = parseFloat(e.target.value);
-                      if (!isNaN(val) && val > 0) setScaleFactor(val);
-                      else if (e.target.value === '') setScaleFactor(1);
-                    }}
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 pointer-events-none">x</span>
-                </div>
+                <button
+                  onClick={() => setScaleEditModal(true)}
+                  className="relative h-9 w-16 bg-slate-100 hover:bg-slate-200 rounded-full transition-all flex items-center justify-center group border-none"
+                >
+                  <span className="text-[13px] font-black tracking-widest text-slate-700 -ml-1 pr-1">{scaleFactor}</span>
+                  <span className="text-[10px] font-black text-slate-400 absolute right-3 pointer-events-none">x</span>
+                </button>
               </div>
             </div>
 
@@ -736,6 +728,19 @@ const RecipeCard: React.FC<{
         inputType="number"
         onConfirm={confirmPriceEdit}
         onCancel={() => setPriceEditModal({ ...priceEditModal, isOpen: false })}
+      />
+      <InputModal
+        isOpen={scaleEditModal}
+        title="修改配方份量"
+        message="請輸入全新的被乘數做為配方倍率 (例如 0.5 或 2.5)"
+        defaultValue={scaleFactor.toString()}
+        inputType="number"
+        onConfirm={(val) => {
+          const num = parseFloat(val);
+          if (!isNaN(num) && num > 0) setScaleFactor(num);
+          setScaleEditModal(false);
+        }}
+        onCancel={() => setScaleEditModal(false)}
       />
     </div>
   );

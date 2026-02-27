@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       /* 背景遮罩：深色毛玻璃，確保蓋住全站所有元素 */
       className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 transition-opacity p-4 animate-in fade-in duration-200"
@@ -66,6 +67,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? ReactDOM.createPortal(modalContent, document.body) : modalContent;
 };
 
 export default ConfirmationModal;

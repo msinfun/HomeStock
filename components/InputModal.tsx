@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 
 interface InputModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ const InputModal: React.FC<InputModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <div
       /* 背景遮罩：深色毛玻璃，確保蓋住全站所有元素 */
       className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200"
@@ -82,6 +83,8 @@ const InputModal: React.FC<InputModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? ReactDOM.createPortal(modalContent, document.body) : modalContent;
 };
 
 export default InputModal;
