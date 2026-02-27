@@ -22,7 +22,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
 
   // Tag Selection State
   const [expandedTagCategory, setExpandedTagCategory] = useState<string | null>(null);
-  const [customTagInput, setCustomTagInput] = useState('');
 
   // Modal State for Alerts
   const [modalConfig, setModalConfig] = useState<{
@@ -215,14 +214,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         : [...prev.tags, tag];
       return { ...prev, tags: newTags };
     });
-  };
-
-  const addCustomTag = () => {
-    const val = customTagInput.trim();
-    if (val && !form.tags.includes(val)) {
-      setForm(prev => ({ ...prev, tags: [...prev.tags, val] }));
-      setCustomTagInput('');
-    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -431,18 +422,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 )}
               </div>
             ))}
-            {/* 手動輸入標籤 */}
-            <div className="p-3 bg-white/90 flex gap-2">
-              <input
-                type="text"
-                className="flex-1 px-4 py-2 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-[15px] -[#007AFF]/15 font-bold text-slate-700 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-                value={customTagInput}
-                onChange={e => setCustomTagInput(e.target.value)}
-                placeholder="手動輸入其他標籤..."
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomTag(); } }}
-              />
-              <button type="button" onClick={addCustomTag} className="bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-slate-600 px-4 py-2 rounded-full font-black text-[13px] hover:bg-slate-50 active:scale-95 transition-all">新增</button>
-            </div>
           </div>
         </div>
 
