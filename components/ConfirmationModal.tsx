@@ -21,12 +21,12 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   return (
     <div
       /* 背景遮罩：深色毛玻璃，確保蓋住全站所有元素 */
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md transition-opacity p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 transition-opacity p-4 animate-in fade-in duration-200"
       onClick={isAlert && onConfirm ? onConfirm : undefined}
     >
       <div
         /* 🍎 彈窗本體：頂級毛玻璃 + 32px 大圓角 + 頂部高光 */
-        className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm overflow-hidden border border-white/80 animate-in zoom-in-95 duration-200"
+        className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm overflow-hidden border border-white/60 animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-8 text-center space-y-3">

@@ -2,16 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { AppSettings, InventoryItem, InventoryDef, InventoryTransaction, Recipe, ShoppingItem, SystemBackup, RecipeTagStructure } from '../types';
 import ConfirmationModal from './ConfirmationModal';
+import InputModal from './InputModal';
 
 interface SettingsViewProps {
   settings: AppSettings;
   onUpdateSettings: (s: AppSettings) => void;
   categories: string[];
   onUpdateCategories: (cats: string[]) => void;
+  onRenameCategory: (oldName: string, newName: string) => void;
   locations: string[];
   onUpdateLocations: (locs: string[]) => void;
+  onRenameLocation: (oldName: string, newName: string) => void;
   recipeTags: RecipeTagStructure;
   onUpdateRecipeTags: (tags: RecipeTagStructure) => void;
+  onRenameRecipeTag: (parent: string, oldChild: string, newChild: string) => void;
   onBack: () => void;
   items: InventoryItem[];
   defs: InventoryDef[];
@@ -23,24 +27,20 @@ interface SettingsViewProps {
   onClearAllData: () => void;
 }
 
+type SettingPage = 'main' | 'api' | 'expiry' | 'tags' | 'categories' | 'locations' | 'data';
+
 const SettingsView: React.FC<SettingsViewProps> = ({
   settings, onUpdateSettings,
-  categories, onUpdateCategories,
-  locations, onUpdateLocations,
-  recipeTags, onUpdateRecipeTags,
-  onBack,
-  items,
-  defs,
-  transactions,
-  recipes,
-  shoppingList,
-  onExcelImport,
-  onSystemRestore,
-  onClearAllData
+  categories, onUpdateCategories, onRenameCategory,
+  locations, onUpdateLocations, onRenameLocation,
+  recipeTags, onUpdateRecipeTags, onRenameRecipeTag,
+  onBack, items, defs, transactions, recipes, shoppingList,
+  onExcelImport, onSystemRestore, onClearAllData
 }) => {
+  const [activePage, setActivePage] = useState<SettingPage>('main');
+
   const [newCat, setNewCat] = useState('');
   const [newLoc, setNewLoc] = useState('');
-
   const [newParentTag, setNewParentTag] = useState('');
   const [newChildTag, setNewChildTag] = useState<{ parent: string, value: string }>({ parent: '', value: '' });
 
@@ -49,23 +49,11 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
   const excelInputRef = useRef<HTMLInputElement>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
-
   const [pendingBackup, setPendingBackup] = useState<SystemBackup | null>(null);
 
-  const [confirmConfig, setConfirmConfig] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    confirmText?: string;
-    cancelText?: string;
-    isAlert?: boolean;
-    onConfirm: () => void;
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => { },
-  });
+  // Modals
+  const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; confirmText?: string; cancelText?: string; isAlert?: boolean; onConfirm: () => void; }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; type: 'category' | 'location' | 'tag'; oldName: string; parent?: string }>({ isOpen: false, type: 'category', oldName: '' });
 
   useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
@@ -74,553 +62,359 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
   const saveApiKey = () => {
     localStorage.setItem('gemini_api_key', apiKey.trim());
-    setConfirmConfig({
-      isOpen: true,
-      title: '設定成功',
-      message: 'API Key 已儲存！您可以開始使用 AI 功能了。',
-      isAlert: true,
-      confirmText: '太棒了',
-      onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-    });
+    setConfirmConfig({ isOpen: true, title: '設定成功', message: 'API Key 已儲存！您可以開始使用 AI 功能了。', isAlert: true, confirmText: '太好了', onConfirm: () => { setConfirmConfig(prev => ({ ...prev, isOpen: false })); setActivePage('main'); } });
   };
 
+  // 🍎 修復核心 Bug：補回四個遺失的儲存與新增函數
   const addCategory = () => {
-    if (newCat && !categories.includes(newCat)) {
-      onUpdateCategories([...categories, newCat]);
+    const val = newCat.trim();
+    if (val && !categories.includes(val)) {
+      onUpdateCategories([...categories, val]);
       setNewCat('');
     }
   };
 
-  const removeCategory = (cat: string) => {
-    onUpdateCategories(categories.filter(c => c !== cat));
-  };
-
   const addLocation = () => {
-    if (newLoc && !locations.includes(newLoc)) {
-      onUpdateLocations([...locations, newLoc]);
+    const val = newLoc.trim();
+    if (val && !locations.includes(val)) {
+      onUpdateLocations([...locations, val]);
       setNewLoc('');
     }
   };
 
-  const removeLocation = (loc: string) => {
-    onUpdateLocations(locations.filter(l => l !== loc));
-  };
-
   const addParentTag = () => {
-    if (newParentTag && !recipeTags[newParentTag]) {
-      onUpdateRecipeTags({ ...recipeTags, [newParentTag]: [] });
+    const val = newParentTag.trim();
+    if (val && !recipeTags[val]) {
+      onUpdateRecipeTags({ ...recipeTags, [val]: [] });
       setNewParentTag('');
     }
   };
 
-  const removeParentTag = (parent: string) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: '刪除標籤分類',
-      message: `確定要刪除主標籤「${parent}」及其所有子標籤嗎？`,
-      confirmText: '確認刪除',
-      onConfirm: () => {
-        const next = { ...recipeTags };
-        delete next[parent];
-        onUpdateRecipeTags(next);
-        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
-
   const addChildTag = (parent: string) => {
     const val = newChildTag.value.trim();
-    if (val && recipeTags[parent] && !recipeTags[parent].includes(val)) {
-      onUpdateRecipeTags({
-        ...recipeTags,
-        [parent]: [...recipeTags[parent], val]
-      });
+    if (val && newChildTag.parent === parent && !recipeTags[parent].includes(val)) {
+      onUpdateRecipeTags({ ...recipeTags, [parent]: [...recipeTags[parent], val] });
       setNewChildTag({ parent: '', value: '' });
     }
   };
 
-  const removeChildTag = (parent: string, child: string) => {
-    if (recipeTags[parent]) {
-      onUpdateRecipeTags({
-        ...recipeTags,
-        [parent]: recipeTags[parent].filter(t => t !== child)
-      });
+  // --- List Manipulations ---
+  const handleRenameConfirm = (newName: string) => {
+    const val = newName.trim();
+    if (val && val !== editModal.oldName) {
+      if (editModal.type === 'category' && !categories.includes(val)) {
+        onRenameCategory(editModal.oldName, val);
+      } else if (editModal.type === 'location' && !locations.includes(val)) {
+        onRenameLocation(editModal.oldName, val);
+      } else if (editModal.type === 'tag' && editModal.parent && !recipeTags[editModal.parent].includes(val)) {
+        onRenameRecipeTag(editModal.parent, editModal.oldName, val);
+      }
     }
+    setEditModal({ ...editModal, isOpen: false });
   };
 
+  const moveLocation = (index: number, direction: 'up' | 'down') => {
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === locations.length - 1)) return;
+    const newArr = [...locations];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    [newArr[index], newArr[targetIdx]] = [newArr[targetIdx], newArr[index]];
+    onUpdateLocations(newArr);
+  };
+
+  const moveCategory = (index: number, direction: 'up' | 'down') => {
+    if ((direction === 'up' && index === 0) || (direction === 'down' && index === categories.length - 1)) return;
+    const newArr = [...categories];
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    [newArr[index], newArr[targetIdx]] = [newArr[targetIdx], newArr[index]];
+    onUpdateCategories(newArr);
+  };
+
+  // --- Exports / Imports --- 
   const exportAllToExcel = async () => {
     const wb = XLSX.utils.book_new();
-
-    const defsForExport = defs.map(d => ({
-      id: d.id,
-      name: d.name,
-      category: d.category,
-      subCategory: d.subCategory,
-      location: d.defaultLocation,
-      minThreshold: d.minThreshold,
-      price: d.price || 0,
-      packageSize: d.packageSize || '',
-      createdDate: d.createdDate
-    }));
-
-    const wsDefs = XLSX.utils.json_to_sheet(defsForExport);
-    XLSX.utils.book_append_sheet(wb, wsDefs, "物品定義(Raw)");
-
-    const wsTrans = XLSX.utils.json_to_sheet(transactions);
-    XLSX.utils.book_append_sheet(wb, wsTrans, "異動紀錄(Raw)");
-
-    const formattedRecipes = recipes.map(r => ({
-      ...r,
-      ingredients: JSON.stringify(r.ingredients),
-      tags: JSON.stringify(r.tags)
-    }));
-    const wsRecipes = XLSX.utils.json_to_sheet(formattedRecipes);
-    XLSX.utils.book_append_sheet(wb, wsRecipes, "食譜(Raw)");
-
+    const defsForExport = defs.map(d => ({ id: d.id, name: d.name, category: d.category, subCategory: d.subCategory, location: d.defaultLocation, minThreshold: d.minThreshold, price: d.price || 0, packageSize: d.packageSize || '', createdDate: d.createdDate }));
+    const wsDefs = XLSX.utils.json_to_sheet(defsForExport); XLSX.utils.book_append_sheet(wb, wsDefs, "物品定義(Raw)");
+    const wsTrans = XLSX.utils.json_to_sheet(transactions); XLSX.utils.book_append_sheet(wb, wsTrans, "異動紀錄(Raw)");
+    const formattedRecipes = recipes.map(r => ({ ...r, ingredients: JSON.stringify(r.ingredients), tags: JSON.stringify(r.tags) }));
+    const wsRecipes = XLSX.utils.json_to_sheet(formattedRecipes); XLSX.utils.book_append_sheet(wb, wsRecipes, "食譜(Raw)");
     const fileName = `HomeStock_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-    if (navigator.share) {
-      const file = new File([blob], fileName, { type: blob.type });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'HomeStock 報表' });
-          return;
-        } catch (err) { }
-      }
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
   const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
+    const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader();
     reader.onload = (evt) => {
       try {
-        const bstr = evt.target?.result;
-        const workbook = XLSX.read(bstr, { type: 'binary' });
+        const workbook = XLSX.read(evt.target?.result, { type: 'binary' });
         let rawDefs = workbook.SheetNames.includes("物品定義(Raw)") ? XLSX.utils.sheet_to_json(workbook.Sheets["物品定義(Raw)"]) : [];
         let rawTrans = workbook.SheetNames.includes("異動紀錄(Raw)") ? XLSX.utils.sheet_to_json(workbook.Sheets["異動紀錄(Raw)"]) : [];
         let rawRecipes = workbook.SheetNames.includes("食譜(Raw)") ? XLSX.utils.sheet_to_json(workbook.Sheets["食譜(Raw)"]) : [];
         onExcelImport(rawDefs as any, rawTrans as any, rawRecipes as any);
-        setConfirmConfig({
-          isOpen: true,
-          title: '匯入成功',
-          message: 'Excel 報表匯入完成！資料已更新。',
-          isAlert: true,
-          confirmText: '太好了',
-          onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-        });
-      } catch (err) {
-        setConfirmConfig({
-          isOpen: true,
-          title: '匯入失敗',
-          message: '檔案格式錯誤或內容毀損，請確認後再試。',
-          isAlert: true,
-          confirmText: '關閉',
-          onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-        });
-      }
+        setConfirmConfig({ isOpen: true, title: '匯入成功', message: 'Excel 報表匯入完成！資料已更新。', isAlert: true, confirmText: '太好了', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) });
+      } catch (err) { setConfirmConfig({ isOpen: true, title: '匯入失敗', message: '檔案格式錯誤或內容毀損。', isAlert: true, confirmText: '關閉', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) }); }
       if (excelInputRef.current) excelInputRef.current.value = '';
-    };
-    reader.readAsBinaryString(file);
+    }; reader.readAsBinaryString(file);
   };
 
   const handleJsonExport = async () => {
-    const backup: SystemBackup = {
-      version: '1.0',
-      timestamp: new Date().toISOString(),
-      data: {
-        defs,
-        transactions,
-        recipes,
-        shoppingList,
-        settings,
-        categories,
-        locations,
-        recipeTags
-      }
-    };
-
+    const backup: SystemBackup = { version: '1.0', timestamp: new Date().toISOString(), data: { defs, transactions, recipes, shoppingList, settings, categories, locations, recipeTags } };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const fileName = `HomeStock_Backup_${new Date().toISOString().split('T')[0]}.json`;
-
-    if (navigator.share) {
-      const file = new File([blob], fileName, { type: "application/json" });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'HomeStock 系統備份' });
-          return;
-        } catch (err) { }
-      }
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
   const handleJsonUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
+    const file = e.target.files?.[0]; if (!file) return; const reader = new FileReader();
     reader.onload = (evt) => {
       try {
         const json = JSON.parse(evt.target?.result as string);
-        if (!json.data || !Array.isArray(json.data.defs)) {
-          throw new Error("Invalid Format");
-        }
+        if (!json.data || !Array.isArray(json.data.defs)) throw new Error("Invalid Format");
         setPendingBackup(json);
-      } catch (err) {
-        setConfirmConfig({
-          isOpen: true,
-          title: '檔案錯誤',
-          message: '備份檔案格式錯誤！請確認上傳的是正確的 .json 備份檔。',
-          isAlert: true,
-          confirmText: '好',
-          onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-        });
-      }
+      } catch (err) { setConfirmConfig({ isOpen: true, title: '檔案錯誤', message: '備份檔案格式錯誤！請確認上傳的是正確的 .json 備份檔。', isAlert: true, confirmText: '好', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) }); }
       if (jsonInputRef.current) jsonInputRef.current.value = '';
-    };
-    reader.readAsText(file);
+    }; reader.readAsText(file);
   };
 
-  const handleClearAllDataConfirm = () => {
-    setConfirmConfig({
-      isOpen: true,
-      title: '清除所有資料',
-      message: '【警告】此動作將清除所有庫存、紀錄、食譜與設定資料，且無法復原！確定要重置所有資料嗎？',
-      confirmText: '確認清除',
-      onConfirm: () => {
-        onClearAllData();
-        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
+  // 🍎 統一的 UI 渲染元件，套用 HomeStock 專屬風格
+  const ListRow = ({ label, onClick, value }: { label: string, onClick: () => void, value?: string }) => (
+    <button onClick={onClick} className="w-full flex justify-between items-center bg-transparent px-5 py-4 border-b border-white/60 last:border-0 hover:bg-white/40 active:bg-white/90 transition-all active:scale-95 rounded-full">
+      <span className="text-[17px] text-slate-800 font-bold">{label}</span>
+      <div className="flex items-center gap-2">
+        {value && <span className="text-[15px] font-bold text-slate-400">{value}</span>}
+        <svg className="w-5 h-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+      </div>
+    </button>
+  );
+
+  const EditRow = ({ name, onEdit, onDelete, onUp, onDown }: { name: string, onEdit: () => void, onDelete: () => void, onUp?: () => void, onDown?: () => void }) => (
+    <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/60 last:border-0 hover:bg-white/80 transition-colors group">
+      <div className="flex items-center gap-3">
+        <button onClick={onDelete} className="w-6 h-6 rounded-full bg-[#FF3B30] text-white flex items-center justify-center shrink-0 active:scale-90 transition-all">
+          <div className="w-3 h-0.5 bg-white rounded-full"></div>
+        </button>
+        <span className="text-[17px] font-bold text-slate-800">{name}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <button onClick={onEdit} className="px-3 py-1.5 text-[#007AFF] font-bold text-sm bg-blue-50/60 hover:bg-blue-100 rounded-full transition-all active:scale-95">編輯</button>
+        {onUp && onDown && (
+          <div className="flex flex-col ml-1 gap-1">
+            <button onClick={onUp} className="text-slate-400 hover:text-slate-600 p-0.5 transition-all active:scale-95 rounded-full"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m18 15-6-6-6 6" /></svg></button>
+            <button onClick={onDown} className="text-slate-400 hover:text-slate-600 p-0.5 transition-all active:scale-95 rounded-full"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="m6 9 6 6 6-6" /></svg></button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
-    <div className="-mt-6 space-y-6 pb-24 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="pt-6 pb-2 px-1 flex items-center justify-between">
-        <h1 className="text-2xl font-black tracking-tighter text-slate-900">設定</h1>
-        <button onClick={onBack} className="bg-white/80 backdrop-blur-md border border-white shadow-sm text-slate-500 hover:text-[#007AFF] hover:bg-white p-2.5 rounded-full transition-all active:scale-90">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-        </button>
+    <div className="space-y-6 animate-in slide-in-from-right-4 duration-300 pb-20">
+
+      {/* HEADER (維持 iOS 導覽感但套用字體) */}
+      <div className="flex items-center justify-between px-2 mb-2">
+        {activePage !== 'main' ? (
+          <button onClick={() => setActivePage('main')} className="text-[#007AFF] flex items-center gap-1 font-bold active:opacity-70 text-[17px]">
+            <svg className="w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+            設定
+          </button>
+        ) : (
+          <h2 className="text-[28px] font-black text-slate-900 tracking-tighter">系統設定</h2>
+        )}
+        {activePage === 'main' && (
+          <button onClick={onBack} className="text-white font-bold bg-[#007AFF] px-5 py-2 rounded-full active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)]">完成</button>
+        )}
       </div>
 
-      {/* API Key Management (實體玻璃藍卡片) */}
-      <section className="bg-gradient-to-br from-[#007AFF] to-[#0056b3] p-6 rounded-[32px] shadow-[0_12px_30px_rgba(0,122,255,0.3),inset_0_2px_2px_rgba(255,255,255,0.3)] text-white space-y-4 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl" />
-        <div className="relative z-10 flex items-center justify-between">
-          <h3 className="font-black text-lg tracking-wide flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" /></svg>
-            Gemini API 設定
-          </h3>
-          <span className="text-[10px] font-black tracking-widest bg-white/20 px-2.5 py-1 rounded-full border border-white/20">本地儲存</span>
+      {/* --- PAGE: MAIN --- */}
+      {activePage === 'main' && (
+        <div className="space-y-6">
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            <ListRow label="Gemini AI 引擎" onClick={() => setActivePage('api')} value={apiKey ? "已連接" : "未設定"} />
+            <ListRow label="過期提醒天數" onClick={() => setActivePage('expiry')} value={`${settings.expiryThresholdDays} 天`} />
+          </div>
+
+          <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">資料分類管理</div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            <ListRow label="大分類管理" onClick={() => setActivePage('categories')} value={categories.length.toString()} />
+            <ListRow label="存放位置管理" onClick={() => setActivePage('locations')} value={locations.length.toString()} />
+            <ListRow label="食譜標籤管理" onClick={() => setActivePage('tags')} value={Object.keys(recipeTags).length.toString()} />
+          </div>
+
+          <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">系統與備份</div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            <ListRow label="資料備份與還原" onClick={() => setActivePage('data')} />
+          </div>
+          <p className="text-center text-[11px] text-slate-400 font-black uppercase tracking-widest mt-8">HomeStock v3.8 (Native Edition)</p>
         </div>
-        <div className="relative z-10 space-y-3">
-          <p className="text-[13px] text-blue-100 font-medium leading-relaxed">
-            請輸入您的 Google Gemini API Key 以啟用 AI 辨識功能。金鑰僅儲存在您的瀏覽器中。
-          </p>
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <input
-                type={showKey ? "text" : "password"}
-                placeholder="在此貼上 API Key"
-                className="w-full h-[46px] px-5 pr-10 rounded-full border border-white/30 bg-white/10 backdrop-blur-md text-white placeholder-blue-200 focus:ring-2 focus:ring-white/50 outline-none text-[15px] font-bold tracking-wider transition-all"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <button
-                onClick={() => setShowKey(!showKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-200 hover:text-white p-1 transition-colors"
-              >
-                {showKey ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" x2="22" y1="2" y2="22" /></svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
-                )}
-              </button>
+      )}
+
+      {/* --- PAGE: API --- */}
+      {activePage === 'api' && (
+        <div className="space-y-4 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">AI 引擎設定</h3>
+          <p className="text-sm font-bold text-slate-500 px-2 leading-relaxed">請輸入您的 Google Gemini API Key 以啟用智慧辨識。金鑰僅儲存在您的設備中。</p>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] p-6 space-y-4">
+            <input type={showKey ? "text" : "password"} placeholder="在此貼上 API Key..." className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={apiKey} onChange={e => setApiKey(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <button onClick={() => setShowKey(!showKey)} className="py-4 bg-slate-100/80 text-slate-600 rounded-full font-black tracking-widest active:scale-95 transition-all text-sm">{showKey ? '隱藏' : '顯示'}</button>
+              <button onClick={saveApiKey} className="py-4 bg-[#007AFF] text-white rounded-full font-black tracking-widest active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)] text-sm">儲存</button>
             </div>
-            <button
-              onClick={saveApiKey}
-              className="h-[46px] bg-white text-[#007AFF] px-6 rounded-full font-black text-[15px] tracking-widest shadow-[0_4px_12px_rgba(0,0,0,0.1)] hover:bg-slate-50 active:scale-95 transition-all shrink-0 border-none"
-            >
-              儲存
-            </button>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* 🍎 過期提醒：頂級玻璃外框 */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] space-y-4">
-        <h3 className="font-black tracking-tight text-slate-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF9500]"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
-          過期提醒設定
-        </h3>
-        <div className="flex items-center justify-between gap-4 bg-white/90 p-4 rounded-[24px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-          <label className="text-[15px] font-black text-slate-600">提前幾天提醒？</label>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              className="w-[72px] h-[40px] px-3 rounded-full bg-slate-100 text-center font-black text-[#007AFF] text-lg outline-none focus:ring-2 focus:ring-[#007AFF]/20 transition-all border-none"
-              value={settings.expiryThresholdDays}
-              onChange={(e) => onUpdateSettings({ ...settings, expiryThresholdDays: parseInt(e.target.value) || 0 })}
-            />
-            <span className="text-sm font-bold text-slate-400">天</span>
+      {/* --- PAGE: EXPIRY --- */}
+      {activePage === 'expiry' && (
+        <div className="space-y-4 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">過期提醒設定</h3>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] p-6 flex items-center justify-between">
+            <span className="text-[17px] text-slate-800 font-bold">提前幾天提醒？</span>
+            <div className="relative w-28">
+              <input type="number" className="w-full px-5 py-3 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-black text-[#007AFF] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={settings.expiryThresholdDays} onChange={(e) => onUpdateSettings({ ...settings, expiryThresholdDays: parseInt(e.target.value) || 0 })} />
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">天</span>
+            </div>
           </div>
         </div>
-      </section>
+      )}
 
-      {/* 🍎 食譜標籤管理 */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] space-y-5">
-        <h3 className="font-black tracking-tight text-slate-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-500"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" /></svg>
-          食譜標籤管理
-        </h3>
-
-        {/* Add Parent Tag */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            placeholder="新增主標籤 (如: 料理方式)..."
-            className="flex-1 min-w-0 h-[46px] px-5 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none text-[15px] font-black tracking-wide text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all"
-            value={newParentTag}
-            onChange={(e) => setNewParentTag(e.target.value)}
-          />
-          <button onClick={addParentTag} className="h-[46px] bg-[#007AFF] text-white px-6 rounded-full font-black text-[15px] tracking-widest shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-none">新增</button>
+      {/* --- PAGE: CATEGORIES --- */}
+      {activePage === 'categories' && (
+        <div className="space-y-4 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">大分類管理</h3>
+          <div className="flex gap-2 px-2">
+            <input type="text" placeholder="新增分類..." className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { addCategory(); } }} />
+            <button onClick={addCategory} className="bg-[#007AFF] text-white px-6 rounded-full font-black tracking-widest active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)] text-sm shrink-0">新增</button>
+          </div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            {categories.map((cat, idx) => (
+              <EditRow key={cat} name={cat} onUp={() => moveCategory(idx, 'up')} onDown={() => moveCategory(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'category', oldName: cat })} onDelete={() => onUpdateCategories(categories.filter(c => c !== cat))} />
+            ))}
+          </div>
+          <p className="text-[11px] font-bold text-slate-400 px-4 text-center tracking-wide">修改名稱會自動更新所有關聯的物品卡片。</p>
         </div>
+      )}
 
-        <div className="space-y-4">
-          {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
-            <div key={parent} className="border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[28px] p-5 bg-white/90">
-              <div className="flex justify-between items-center mb-3">
-                <h4 className="font-black text-slate-800 text-[15px] tracking-wide">{parent}</h4>
-                <button onClick={() => removeParentTag(parent)} className="text-[11px] font-black tracking-widest text-[#FF3B30] bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-full transition-colors active:scale-95 border-none">刪除分類</button>
+      {/* --- PAGE: LOCATIONS --- */}
+      {activePage === 'locations' && (
+        <div className="space-y-4 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">存放位置管理</h3>
+          <div className="flex gap-2 px-2">
+            <input type="text" placeholder="新增位置..." className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newLoc} onChange={e => setNewLoc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { addLocation(); } }} />
+            <button onClick={addLocation} className="bg-[#007AFF] text-white px-6 rounded-full font-black tracking-widest active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)] text-sm shrink-0">新增</button>
+          </div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            {locations.map((loc, idx) => (
+              <EditRow key={loc} name={loc} onUp={() => moveLocation(idx, 'up')} onDown={() => moveLocation(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'location', oldName: loc })} onDelete={() => onUpdateLocations(locations.filter(l => l !== loc))} />
+            ))}
+          </div>
+          <p className="text-[11px] font-bold text-slate-400 px-4 text-center tracking-wide">可使用右側上下箭頭調整選單排序。</p>
+        </div>
+      )}
+
+      {/* --- PAGE: TAGS --- */}
+      {activePage === 'tags' && (
+        <div className="space-y-6 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">食譜標籤管理</h3>
+          <div className="flex gap-2 px-2">
+            <input type="text" placeholder="新增主分類 (如: 料理方式)" className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newParentTag} onChange={e => setNewParentTag(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { addParentTag(); } }} />
+            <button onClick={addParentTag} className="bg-slate-800 text-white px-5 rounded-full font-black tracking-widest active:scale-95 transition-all text-sm shrink-0 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">新增群組</button>
+          </div>
+          <div className="space-y-5">
+            {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
+              <div key={parent} className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 overflow-hidden">
+                <div className="bg-white/80 px-5 py-4 flex justify-between items-center border-b border-white/60">
+                  <h4 className="font-black text-slate-800 text-[17px] tracking-tight">{parent}</h4>
+                  <button onClick={() => {
+                    setConfirmConfig({ isOpen: true, title: '刪除群組', message: `確定刪除「${parent}」及其所有標籤嗎？`, confirmText: '刪除', onConfirm: () => { const next = { ...recipeTags }; delete next[parent]; onUpdateRecipeTags(next); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                  }} className="text-[#FF3B30] text-[11px] tracking-widest font-black px-3 py-1.5 bg-red-50 rounded-full">刪除群組</button>
+                </div>
+                <div className="p-0">
+                  {children.map(child => (
+                    <EditRow key={child} name={child} onEdit={() => setEditModal({ isOpen: true, type: 'tag', oldName: child, parent })} onDelete={() => { onUpdateRecipeTags({ ...recipeTags, [parent]: recipeTags[parent].filter(t => t !== child) }); }} />
+                  ))}
+                  {children.length === 0 && <div className="py-6 text-center text-sm font-bold text-slate-400">目前無標籤</div>}
+                </div>
+                <div className="p-4 bg-white/80 border-t border-white/60 flex gap-2">
+                  <input type="text" placeholder={`新增 ${parent} 標籤...`} className="flex-1 px-4 py-3 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.02)] text-[15px] font-bold text-slate-800 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newChildTag.parent === parent ? newChildTag.value : ''} onChange={e => setNewChildTag({ parent, value: e.target.value })} onKeyDown={e => { if (e.key === 'Enter') addChildTag(parent); }} />
+                  <button onClick={() => addChildTag(parent)} className="bg-[#007AFF] text-white w-12 rounded-full font-black text-lg shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-95 shrink-0 flex items-center justify-center">+</button>
+                </div>
               </div>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {children.map((child: string) => (
-                  /* 🍎 內部標籤：扁平無邊框膠囊 */
-                  <span key={child} className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-full text-[13px] font-black tracking-wide">
-                    {child}
-                    <button onClick={() => removeChildTag(parent, child)} className="text-slate-400 hover:text-[#FF3B30] bg-white rounded-full p-0.5 transition-colors shadow-sm border-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                    </button>
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={`新增 ${parent} 子標籤...`}
-                  className="flex-1 min-w-0 h-[40px] px-4 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)] focus:ring-2 focus:ring-[#007AFF]/15 outline-none text-[13px] font-bold text-slate-700 placeholder:font-normal transition-all"
-                  value={newChildTag.parent === parent ? newChildTag.value : ''}
-                  onChange={(e) => setNewChildTag({ parent: parent, value: e.target.value })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addChildTag(parent);
-                    }
-                  }}
-                />
-                <button onClick={() => addChildTag(parent)} className="h-[40px] bg-slate-100 border-none text-[#007AFF] px-5 rounded-full font-black text-[13px] hover:bg-slate-200 active:scale-95 transition-all shrink-0">
-                  新增
-                </button>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </section>
+      )}
 
-      {/* 🍎 類別管理 */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] space-y-4">
-        <h3 className="font-black tracking-tight text-slate-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
-          類別管理
-        </h3>
-        <div className="flex gap-2">
-          <input type="text" placeholder="新增類別..." className="flex-1 min-w-0 h-[46px] px-5 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none text-[15px] font-black tracking-wide text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all" value={newCat} onChange={(e) => setNewCat(e.target.value)} />
-          <button onClick={addCategory} className="h-[46px] bg-[#007AFF] text-white px-6 rounded-full font-black text-[15px] tracking-widest shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-none">新增</button>
-        </div>
-        <div className="flex flex-wrap gap-2 pt-2">
-          {categories.map(cat => (
-            <span key={cat} className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-full text-[13px] font-black tracking-wide border-none">
-              {cat}
-              <button onClick={() => removeCategory(cat)} className="text-slate-400 hover:text-[#FF3B30] bg-white rounded-full p-0.5 transition-colors shadow-sm border-none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-              </button>
-            </span>
-          ))}
-        </div>
-      </section>
+      {/* --- PAGE: DATA --- */}
+      {activePage === 'data' && (
+        <div className="space-y-6 animate-in slide-in-from-right-8">
+          <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">資料與備份</h3>
 
-      {/* 🍎 存放位置管理 */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] space-y-4">
-        <h3 className="font-black tracking-tight text-slate-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>
-          存放位置管理
-        </h3>
-        <div className="flex gap-2">
-          <input type="text" placeholder="新增位置..." className="flex-1 min-w-0 h-[46px] px-5 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none text-[15px] font-black tracking-wide text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all" value={newLoc} onChange={(e) => setNewLoc(e.target.value)} />
-          <button onClick={addLocation} className="h-[46px] bg-[#007AFF] text-white px-6 rounded-full font-black text-[15px] tracking-widest shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-95 transition-all shrink-0 border-none">新增</button>
-        </div>
-        <div className="flex flex-wrap gap-2 pt-2">
-          {locations.map(loc => (
-            <span key={loc} className="inline-flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3.5 py-1.5 rounded-full text-[13px] font-black tracking-wide border-none">
-              {loc}
-              <button onClick={() => removeLocation(loc)} className="text-slate-400 hover:text-[#FF3B30] bg-white rounded-full p-0.5 transition-colors shadow-sm border-none">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-              </button>
-            </span>
-          ))}
-        </div>
-      </section>
-
-      {/* 🍎 資料管理 (雙軌制) */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] space-y-6">
-        <h3 className="font-black tracking-tight text-slate-800 flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
-          資料管理
-        </h3>
-
-        {/* Track 1: System Backup (JSON) */}
-        <div className="space-y-4">
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">系統備份 (JSON)</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={handleJsonExport} className="bg-blue-50 text-[#007AFF] font-black tracking-widest py-3.5 rounded-full border-none shadow-sm hover:bg-blue-100 transition-all active:scale-95 text-[13px]">
-              完整備份
+          <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">JSON 系統完整備份 (推薦)</div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            <button onClick={handleJsonExport} className="w-full flex items-center gap-3 px-5 py-4 border-b border-white/60 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-all active:scale-95 rounded-full">
+              <svg className="w-5 h-5 text-[#007AFF]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+              匯出備份檔
             </button>
-            <button onClick={() => jsonInputRef.current?.click()} className="bg-[#007AFF] text-white font-black tracking-widest py-3.5 rounded-full shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-95 transition-all text-[13px] border-none">
-              還原備份
+            <button onClick={() => jsonInputRef.current?.click()} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-colors">
+              <svg className="w-5 h-5 text-[#34C759]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+              還原備份檔
             </button>
             <input type="file" accept=".json" ref={jsonInputRef} onChange={handleJsonUpload} className="hidden" />
           </div>
-          <p className="text-[11px] font-bold text-slate-400 leading-relaxed px-1">
-            * 推薦使用。可完整備份並精確還原所有資料（含設定、清單與紀錄）。
-          </p>
-        </div>
 
-        <div className="border-t border-white/60"></div>
-
-        {/* Track 2: Excel Reports */}
-        <div className="space-y-4">
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">報表管理 (Excel)</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={exportAllToExcel} className="bg-emerald-50 text-emerald-600 font-black tracking-widest py-3.5 rounded-full border-none shadow-sm hover:bg-emerald-100 transition-all active:scale-95 text-[13px]">
-              匯出報表
+          <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">Excel 報表</div>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+            <button onClick={exportAllToExcel} className="w-full flex items-center gap-3 px-5 py-4 border-b border-white/60 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-all active:scale-95 rounded-full">
+              <svg className="w-5 h-5 text-[#007AFF]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M8 13h2" /><path d="M8 17h2" /><path d="M14 13h2" /><path d="M14 17h2" /></svg>
+              匯出 Excel
             </button>
-            <button onClick={() => excelInputRef.current?.click()} className="bg-white text-slate-600 font-black tracking-widest py-3.5 rounded-full border border-white shadow-sm hover:bg-slate-50 transition-all active:scale-95 text-[13px]">
+            <button onClick={() => excelInputRef.current?.click()} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-colors">
+              <svg className="w-5 h-5 text-[#34C759]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M12 18v-6" /><path d="m9 15 3-3 3 3" /></svg>
               匯入 Excel
             </button>
             <input type="file" accept=".xlsx, .xls" ref={excelInputRef} onChange={handleExcelUpload} className="hidden" />
           </div>
-        </div>
 
-        <div className="border-t border-white/60 pt-6">
-          <button onClick={handleClearAllDataConfirm} className="w-full bg-rose-50 text-[#FF3B30] font-black tracking-widest py-4 rounded-full border-none shadow-sm hover:bg-rose-100 active:scale-95 transition-all text-sm">
-            ⚠️ 清除所有資料 (重置)
-          </button>
-        </div>
-      </section>
-
-      <div className="pt-2 flex flex-col items-center gap-4">
-        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">HomeStock v3.7.1 (Personal Edition)</p>
-      </div>
-
-      {/* 🍎 Restore Mode Modal：升級為最高級彈窗 */}
-      {pendingBackup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/80 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-8">
-            <h3 className="text-xl font-black tracking-tighter text-slate-900 mb-3 text-center">選擇還原模式</h3>
-            <p className="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">
-              您選擇了一個備份檔案 ({new Date(pendingBackup.timestamp).toLocaleDateString()})。<br />請問您希望如何處理現有資料？
-            </p>
-
-            <div className="space-y-3">
-              <button
-                onClick={() => {
-                  onSystemRestore(pendingBackup, 'merge');
-                  setPendingBackup(null);
-                  setConfirmConfig({
-                    isOpen: true,
-                    title: '還原成功',
-                    message: '資料合併完成！',
-                    isAlert: true,
-                    confirmText: '好的',
-                    onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-                  });
-                }}
-                className="w-full p-5 rounded-[24px] bg-indigo-50/80 border border-white shadow-sm hover:bg-indigo-100 transition-all text-left relative group active:scale-[0.98]"
-              >
-                <span className="block text-[15px] font-black tracking-wide text-indigo-700 mb-1">智能合併 (推薦)</span>
-                <span className="text-xs font-bold text-indigo-500 opacity-80 leading-relaxed block pr-6">保留現有資料，僅更新重複項並加入新項目。</span>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 text-indigo-400 group-hover:translate-x-1 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setConfirmConfig({
-                    isOpen: true,
-                    title: '確認覆蓋',
-                    message: '確定要覆蓋嗎？現有資料將完全消失，且無法復原。',
-                    confirmText: '確認覆蓋',
-                    onConfirm: () => {
-                      onSystemRestore(pendingBackup, 'overwrite');
-                      setPendingBackup(null);
-                      setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-                      setConfirmConfig({
-                        isOpen: true,
-                        title: '還原成功',
-                        message: '資料已完整還原！',
-                        isAlert: true,
-                        confirmText: '好的',
-                        onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false }))
-                      });
-                    }
-                  });
-                }}
-                className="w-full p-5 rounded-[24px] bg-white/90 border border-white shadow-sm hover:bg-rose-50 transition-all text-left relative group active:scale-[0.98]"
-              >
-                <span className="block text-[15px] font-black tracking-wide text-rose-600 mb-1">完全覆蓋</span>
-                <span className="text-xs font-bold text-slate-400 leading-relaxed block">刪除當前所有資料，完全替換為備份內容。</span>
-              </button>
-            </div>
-
-            <button onClick={() => setPendingBackup(null)} className="w-full mt-6 text-slate-400 text-[15px] font-black py-3.5 hover:bg-slate-50 active:scale-96 transition-all bg-white border border-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] rounded-full tracking-widest">
-              取消操作
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 mt-8">
+            <button onClick={() => {
+              setConfirmConfig({ isOpen: true, title: '清除所有資料', message: '【警告】此動作將清除所有庫存、紀錄、食譜與設定資料，且無法復原！確定要重置所有資料嗎？', confirmText: '確認清除', onConfirm: () => { onClearAllData(); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+            }} className="w-full text-center px-5 py-4 text-[#FF3B30] font-black tracking-widest text-[17px] active:bg-red-50 transition-colors">
+              重置所有資料
             </button>
           </div>
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={confirmConfig.isOpen}
-        title={confirmConfig.title}
-        message={confirmConfig.message}
-        confirmText={confirmConfig.confirmText}
-        cancelText={confirmConfig.cancelText}
-        isAlert={confirmConfig.isAlert}
-        onConfirm={confirmConfig.onConfirm}
-        onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
+      {/* Reused Modals */}
+      <InputModal
+        isOpen={editModal.isOpen}
+        title={`修改${editModal.type === 'category' ? '分類' : editModal.type === 'location' ? '位置' : '標籤'}名稱`}
+        message={`正在修改：「${editModal.oldName}」`}
+        defaultValue={editModal.oldName}
+        onConfirm={handleRenameConfirm}
+        onCancel={() => setEditModal({ ...editModal, isOpen: false })}
       />
 
+      {pendingBackup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6">
+            <h3 className="text-xl font-black text-slate-900 mb-2 text-center tracking-tighter">選擇還原模式</h3>
+            <p className="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">您選擇了一個備份檔案 ({new Date(pendingBackup.timestamp).toLocaleDateString()})。<br />請問您希望如何處理現有資料？</p>
+            <div className="space-y-3">
+              <button onClick={() => { onSystemRestore(pendingBackup, 'merge'); setPendingBackup(null); setConfirmConfig({ isOpen: true, title: '還原成功', message: '資料合併完成！', isAlert: true, confirmText: '好的', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) }); }} className="w-full py-4 rounded-full bg-[#007AFF] text-white font-black tracking-widest shadow-[0_4px_12px_rgba(0,122,255,0.2)] active:scale-[0.98] transition-all text-center">
+                智能合併 (推薦) <span className="block text-[10px] font-normal opacity-80 mt-0.5 tracking-normal">保留現有，僅加入新項目</span>
+              </button>
+              <button onClick={() => { setConfirmConfig({ isOpen: true, title: '確認覆蓋', message: '確定要覆蓋嗎？現有資料將完全消失。', confirmText: '確認覆蓋', onConfirm: () => { onSystemRestore(pendingBackup, 'overwrite'); setPendingBackup(null); setConfirmConfig(prev => ({ ...prev, isOpen: false })); setTimeout(() => setConfirmConfig({ isOpen: true, title: '還原成功', message: '資料已完整還原！', isAlert: true, confirmText: '好的', onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) }), 300); } }); }} className="w-full py-4 rounded-full bg-red-50 text-[#FF3B30] font-black tracking-widest active:scale-[0.98] transition-all text-center">
+                完全覆蓋 <span className="block text-[10px] font-normal opacity-70 mt-0.5 tracking-normal">刪除當前資料，完全替換為備份</span>
+              </button>
+            </div>
+            <button onClick={() => setPendingBackup(null)} className="w-full mt-4 text-slate-400 text-sm font-bold py-3 hover:text-slate-600 transition-colors">取消操作</button>
+          </div>
+        </div>
+      )}
+
+      <ConfirmationModal isOpen={confirmConfig.isOpen} title={confirmConfig.title} message={confirmConfig.message} confirmText={confirmConfig.confirmText} cancelText={confirmConfig.cancelText} isAlert={confirmConfig.isAlert} onConfirm={confirmConfig.onConfirm} onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))} />
     </div>
   );
 };

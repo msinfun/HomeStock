@@ -11,6 +11,7 @@ interface InventoryListProps {
   onEdit: (item: InventoryItem) => void;
   onDuplicate: (item: InventoryItem) => void;
   categories: string[];
+  locations: string[]; // 🍎 接收從 App.tsx 傳來的位置清單
   onAddToShopping: (name: string, category: string) => void;
   settings: AppSettings;
 }
@@ -102,11 +103,11 @@ const InventoryItemCard: React.FC<{
     let text = "";
     let badgeClass = "bg-slate-100 text-slate-500";
 
-    if (days < 0) { text = `已過期 ${Math.abs(days)} 天`; badgeClass = "bg-rose-50 text-[#FF3B30]"; }
-    else if (days <= 3) { text = `剩 ${days} 天`; badgeClass = "bg-rose-50 text-[#FF3B30]"; }
+    if (days < 0) { text = `已過期 ${Math.abs(days)} 天`; badgeClass = "bg-red-50 text-[#FF3B30]"; }
+    else if (days <= 3) { text = `剩 ${days} 天`; badgeClass = "bg-red-50 text-[#FF3B30]"; }
     else if (days <= 7) { text = `剩 ${days} 天`; badgeClass = "bg-orange-50 text-[#FF9500]"; }
     else if (days <= thresholdDays) { text = `剩 ${days} 天`; badgeClass = "bg-amber-50 text-amber-600"; }
-    else if (days < 30) { text = `剩 ${Math.floor(days / 7)} 週`; badgeClass = "bg-emerald-50 text-[#34C759]"; }
+    else if (days < 30) { text = `剩 ${Math.floor(days / 7)} 週`; badgeClass = "bg-green-50 text-[#34C759]"; }
     else if (days < 365) { text = `剩 ${Math.floor(days / 30)} 個月`; badgeClass = "bg-slate-100 text-slate-500"; }
     else { text = `剩 ${Math.floor(days / 365)} 年`; badgeClass = "bg-slate-100 text-slate-500"; }
 
@@ -123,7 +124,7 @@ const InventoryItemCard: React.FC<{
     return (
       <div
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-        className="transition-all duration-300 relative z-10 cursor-pointer hover:bg-white/30 p-5 h-full"
+        className="transition-all duration-300 relative z-10 cursor-pointer hover:bg-white/80 p-5 h-full"
       >
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-[17px] font-black tracking-tight text-slate-800">{item.name}</h3>
@@ -160,7 +161,7 @@ const InventoryItemCard: React.FC<{
       )}
 
       <div
-        className={`transition-all duration-300 relative z-10 cursor-pointer select-none ${(selectedIds.has(item.id) || isExpanded) ? 'bg-white/50' : 'hover:bg-white/30'} p-5 h-full`}
+        className={`transition-all duration-300 relative z-10 cursor-pointer select-none ${(selectedIds.has(item.id) || isExpanded) ? 'bg-white/80' : 'hover:bg-white/80'} p-5 h-full`}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -172,7 +173,7 @@ const InventoryItemCard: React.FC<{
       >
         {isBatchMode && (
           <div className="absolute top-5 left-4 z-10">
-            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${selectedIds.has(item.id) ? 'bg-[#007AFF] shadow-md shadow-blue-500/20' : 'bg-white border border-slate-300'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${selectedIds.has(item.id) ? 'bg-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)] shadow-blue-500/20' : 'bg-white border border-slate-300'}`}>
               {selectedIds.has(item.id) && (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
               )}
@@ -211,7 +212,6 @@ const InventoryItemCard: React.FC<{
                 </span>
               )}
 
-              {/* 🍎 單價移至此處，與容量相同風格 */}
               {(item.price ?? 0) > 0 && (
                 <span className="text-[10px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black whitespace-nowrap tracking-widest">
                   ${item.price}
@@ -229,7 +229,7 @@ const InventoryItemCard: React.FC<{
           </div>
 
           <div className="flex items-center justify-center shrink-0 ml-1 h-full min-h-[2.5rem]">
-            <span className={`min-w-[2rem] text-center font-black tracking-tighter text-2xl text-slate-800 ${item.quantity === 0 ? 'text-rose-500' : ''}`}>
+            <span className={`min-w-[2rem] text-center font-black tracking-tighter text-2xl text-slate-800 ${item.quantity === 0 ? 'text-[#FF3B30]' : ''}`}>
               {item.quantity}
             </span>
           </div>
@@ -237,11 +237,8 @@ const InventoryItemCard: React.FC<{
 
         {isExpanded && (
           <div className="animate-in slide-in-from-top-2 duration-200">
-            {/* 🍎 移除「批次庫存」區塊，直接顯示底部詳細資訊 */}
             {(item.expiryDate || item.openedDate || item.remarks || item.lastUsedDate || item.lastPurchasedDate) && (
-              <div className={`mt-4 pt-4 mb-1 border-t border-white/40 flex flex-wrap gap-x-5 gap-y-3 text-[11px] font-bold text-slate-500 ${isBatchMode ? 'pl-8' : ''}`}>
-                {/* 🍎 單價已移至上方標籤區 */}
-                {/* 🍎 效期改為與其他資訊並排，無條件顯示 */}
+              <div className={`mt-4 pt-4 mb-1 border-t border-white/60 flex flex-wrap gap-x-5 gap-y-3 text-[11px] font-bold text-slate-500 ${isBatchMode ? 'pl-8' : ''}`}>
                 {item.expiryDate && (
                   <div className="flex items-center gap-1.5">
                     <span className="text-slate-400 tracking-wider">效期:</span> {item.expiryDate}
@@ -273,7 +270,7 @@ const InventoryItemCard: React.FC<{
         )}
 
         {!isBatchMode && (
-          <div className={`flex justify-between items-center mt-4 pt-3 border-t border-white/40 ${isExpanded ? '' : 'pt-3'}`}>
+          <div className={`flex justify-between items-center mt-4 pt-3 border-t border-white/60 ${isExpanded ? '' : 'pt-3'}`}>
             <div className="flex items-center gap-1">
               <button
                 onClick={(e) => { e.stopPropagation(); onEdit(item); }}
@@ -313,7 +310,7 @@ const InventoryItemCard: React.FC<{
             <div className="flex items-center gap-1">
               <button
                 onClick={(e) => { e.stopPropagation(); onConsumeRequest(item); }}
-                className="p-2.5 text-rose-500 hover:bg-rose-50 transition-all rounded-full"
+                className="p-2.5 text-[#FF3B30] hover:bg-red-50 transition-all rounded-full"
                 title="消耗"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /></svg>
@@ -335,7 +332,7 @@ const InventoryItemCard: React.FC<{
               {item.quantity > 0 && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onScrapRequest(item); }}
-                  className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all rounded-full"
+                  className="p-2.5 text-slate-400 hover:text-[#FF3B30] hover:bg-red-50 transition-all rounded-full"
                   title="報廢"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
@@ -541,7 +538,6 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     };
   }, [search, props.items]);
 
-  // 🍎 簡化版的調整數量邏輯：直達指令
   const handleAdjustQuantity = (item: InventoryItem, delta: number) => {
     const newTotalQty = Math.max(0, item.quantity + delta);
     const updates: any = { quantity: newTotalQty };
@@ -616,14 +612,14 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
 
   return (
     <div className="-mt-6 space-y-0 pb-24">
-      <div className="sticky top-0 bg-white/60 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/40 shadow-[0_4px_20px_rgba(0,0,0,0.02)] -mx-4 px-4 h-16 flex items-center gap-3">
+      <div className="sticky top-0 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] -mx-4 px-4 h-16 flex items-center gap-3">
 
         <div className="relative flex-1 h-11 group">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
           <input
             type="text"
             placeholder="搜尋物品..."
-            className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none transition-all placeholder:font-normal placeholder:text-slate-400"
+            className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 transition-all placeholder:font-normal placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -644,13 +640,13 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/40 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
-                <div className="flex justify-between items-center p-5 border-b border-white/40 shrink-0 bg-white/50">
+              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
+                <div className="flex justify-between items-center p-5 border-b border-white/60 shrink-0 bg-white/80">
                   <h3 className="font-black tracking-tighter text-slate-900 text-base flex items-center gap-2">
                     篩選條件
                   </h3>
                   {activeFilterCount > 0 && (
-                    <button onClick={clearFilters} className="text-xs text-rose-500 font-black hover:text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">
+                    <button onClick={clearFilters} className="text-xs text-[#FF3B30] font-black hover:text-rose-600 bg-red-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">
                       清除 ({activeFilterCount})
                     </button>
                   )}
@@ -665,12 +661,12 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
 
                     return (
                       <div key={cat} className="rounded-[20px] overflow-hidden">
-                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white/50 transition-all cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white/80 transition-all cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}>
                           <div
                             className="flex items-center justify-center w-6 h-6 mr-3 active:scale-90 transition-transform"
                             onClick={(e) => { e.stopPropagation(); toggleFilterCategory(cat); }}
                           >
-                            <div className={`w-5 h-5 border-[1.5px] rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-sm shadow-blue-500/20' : 'border-slate-300 bg-white'}`}>
+                            <div className={`w-5 h-5 border-[1.5px] rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)] shadow-blue-500/20' : 'border-slate-300 bg-white'}`}>
                               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                             </div>
                           </div>
@@ -696,8 +692,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                             {subCats.map((sub: string) => {
                               const isSubSelected = filters.subCategories.has(sub);
                               return (
-                                <div key={sub} className="flex items-center p-2 hover:bg-white/50 rounded-2xl cursor-pointer transition-all" onClick={() => toggleFilterSubCategory(sub)}>
-                                  <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-sm' : 'border-slate-300 bg-white'}`}>
+                                <div key={sub} className="flex items-center p-2 hover:bg-white/80 rounded-[24px] cursor-pointer transition-all" onClick={() => toggleFilterSubCategory(sub)}>
+                                  <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'border-slate-300 bg-white'}`}>
                                     {isSubSelected && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                                   </div>
                                   <span className={`text-[13px] font-black tracking-wide ${isSubSelected ? 'text-[#007AFF]' : 'text-slate-500'}`}>
@@ -713,7 +709,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                   })}
                 </div>
 
-                <div className="p-5 bg-white/50 border-t border-white/40 shrink-0 sticky bottom-0 backdrop-blur-md">
+                <div className="p-5 bg-white/80 border-t border-white/60 shrink-0 sticky bottom-0 backdrop-blur-[40px] backdrop-saturate-150">
                   <button
                     onClick={() => setIsFilterOpen(false)}
                     className="w-full py-4 bg-[#007AFF] text-white font-black tracking-widest rounded-full text-sm shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all"
@@ -749,7 +745,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       </div>
 
       {pinnedCategoryReviews && (
-        <div className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] animate-in slide-in-from-top duration-300 relative overflow-hidden mt-4 mb-6">
+        <div className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] animate-in slide-in-from-top duration-300 relative overflow-hidden mt-4 mb-6">
           <div className="absolute right-0 top-0 opacity-5 p-2 pointer-events-none">
             <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-4.5a1 1 0 0 1-2 0V7a1 1 0 0 1 2 0z" /></svg>
           </div>
@@ -773,13 +769,13 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       <div className="h-4 w-full shrink-0"></div>
       <div className="pb-20">
         {sortedItems.length === 0 ? (
-          <div className="text-center py-20 text-slate-500 bg-white/50 backdrop-blur-xl rounded-[32px] border border-white/40 shadow-inner">
+          <div className="text-center py-20 text-slate-500 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
             <p className="font-black text-lg tracking-tighter text-slate-700">沒有符合條件的物品</p>
             <p className="text-sm font-bold mt-1">請嘗試搜尋關鍵字或調整篩選</p>
           </div>
         ) : (
           sortedItems.map(item => (
-            <div key={item.id} className="mb-4 rounded-[32px] border border-white/40 shadow-[0_12px_32px_rgba(0,0,0,0.05),inset_0_2px_2px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(255,255,255,0.2)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+            <div key={item.id} className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
               <InventoryItemCard
                 item={item}
                 isExpanded={expandedItemIds.has(item.id)}
@@ -806,8 +802,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       </div>
 
       {quickAdjust && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setQuickAdjust(null)}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/40 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setQuickAdjust(null)}>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">
               {quickAdjust.mode === 'add' ? '快速入庫' : '快速消耗'}
             </h3>
@@ -817,7 +813,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
             <input
               autoFocus
               type="number"
-              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold text-center outline-none focus:ring-2 focus:ring-[#007AFF]/20 transition-all mb-6"
+              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold text-center -[#007AFF]/20 transition-all mb-6 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={customDelta}
               onChange={e => setCustomDelta(e.target.value)}
               placeholder="數量"
@@ -831,45 +827,52 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       )}
 
       {isBatchMode && (
-        <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 px-4 py-2.5 rounded-full shadow-[0_16px_40px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,1)] z-[60] animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 px-4 py-2.5 rounded-full shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] z-[60] animate-in slide-in-from-bottom-5">
           <span className="text-sm font-black text-[#007AFF] tracking-widest mr-2 whitespace-nowrap shrink-0">{selectedIds.size} 已選</span>
           <button onClick={() => setBatchEditModal({ type: 'category' })} className="px-4 py-2 bg-white/90 hover:bg-white text-slate-700 rounded-full text-xs font-black transition-colors active:scale-95 whitespace-nowrap shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">分類</button>
           <button onClick={() => setBatchEditModal({ type: 'location' })} className="px-4 py-2 bg-white/90 hover:bg-white text-slate-700 rounded-full text-xs font-black transition-colors active:scale-95 whitespace-nowrap shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">位置</button>
           <div className="w-px h-5 bg-slate-300 mx-1"></div>
-          <button onClick={cancelBatchMode} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50/50 rounded-full transition-colors active:scale-95">
+          <button onClick={cancelBatchMode} className="p-2 text-slate-400 hover:text-[#FF3B30] hover:bg-red-50/50 rounded-full transition-all active:scale-95">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>
         </div>
       )}
 
+      {/* 🍎 批次修改升級為下拉選單 */}
       {batchEditModal.type && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/40 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
+          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-6 text-center whitespace-nowrap">
               批次修改{batchEditModal.type === 'category' ? '分類' : '位置'}
             </h3>
-            <input
-              autoFocus
-              type="text"
-              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold text-center outline-none focus:ring-2 focus:ring-[#007AFF]/20 transition-all mb-6"
+
+            <select
+              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold -[#007AFF]/20 transition-all mb-6 appearance-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
               value={batchTargetValue}
               onChange={e => setBatchTargetValue(e.target.value)}
-              placeholder={`輸入新的...`}
-            />
+            >
+              <option value="" disabled>請選擇新的{batchEditModal.type === 'category' ? '分類' : '位置'}...</option>
+              {batchEditModal.type === 'category'
+                ? props.categories.map(cat => <option key={cat} value={cat}>{cat}</option>)
+                : props.locations.map(loc => <option key={loc} value={loc}>{loc}</option>)
+              }
+            </select>
+
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setBatchEditModal({ type: null })} className="py-3.5 rounded-full font-black text-slate-500 bg-slate-100 hover:bg-slate-200 active:scale-[0.96] transition-all text-sm">取消</button>
-              <button onClick={handleBatchUpdate} className="py-3.5 rounded-full font-black text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-sm">確認</button>
+              <button onClick={handleBatchUpdate} disabled={!batchTargetValue} className="py-3.5 rounded-full font-black text-white bg-[#007AFF] disabled:opacity-50 shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-sm">確認</button>
             </div>
           </div>
         </div>
       )}
 
       {isFilterMenuOpen && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsFilterMenuOpen(false)}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/40 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-white/40 shrink-0 bg-white/50">
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsFilterMenuOpen(false)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 border-b border-white/60 shrink-0 bg-white/80">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
-              <button onClick={() => setIsFilterMenuOpen(false)} className="p-2.5 bg-white/90 border border-white shadow-sm rounded-full text-slate-500 hover:bg-white active:scale-95 transition-all">
+              <button onClick={() => setIsFilterMenuOpen(false)} className="p-2.5 bg-white/90 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-white active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </button>
             </div>
@@ -885,7 +888,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     <button
                       key={opt.id}
                       onClick={() => setSortOrder(opt.id as any)}
-                      className={`flex items-center justify-between px-5 py-4 rounded-[24px] border-none transition-all active:scale-[0.98] ${sortOrder === opt.id ? 'bg-blue-50/80 text-[#007AFF] shadow-sm' : 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex items-center justify-between px-5 py-4 rounded-[24px] border-none transition-all active:scale-[0.98] ${sortOrder === opt.id ? 'bg-blue-50/80 text-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-600 hover:bg-slate-50'}`}
                     >
                       <div className="flex items-center gap-3">
                         {opt.icon}
@@ -907,9 +910,9 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     </div>
                     <button
                       onClick={() => setViewMode(viewMode === 'review' ? 'inventory' : 'review')}
-                      className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-inner ${viewMode === 'review' ? 'bg-[#34C759]' : 'bg-slate-200'}`}
+                      className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${viewMode === 'review' ? 'bg-[#34C759]' : 'bg-slate-200'}`}
                     >
-                      <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${viewMode === 'review' ? 'translate-x-6' : 'translate-x-0'}`} />
+                      <div className={`w-6 h-6 bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.03)] transform transition-transform duration-300 ${viewMode === 'review' ? 'translate-x-6' : 'translate-x-0'}`} />
                     </button>
                   </div>
 
@@ -920,9 +923,9 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     </div>
                     <button
                       onClick={() => setHideOutOfStock(!hideOutOfStock)}
-                      className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-inner ${hideOutOfStock ? 'bg-[#34C759]' : 'bg-slate-200'}`}
+                      className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${hideOutOfStock ? 'bg-[#34C759]' : 'bg-slate-200'}`}
                     >
-                      <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${hideOutOfStock ? 'translate-x-6' : 'translate-x-0'}`} />
+                      <div className={`w-6 h-6 bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.03)] transform transition-transform duration-300 ${hideOutOfStock ? 'translate-x-6' : 'translate-x-0'}`} />
                     </button>
                   </div>
                 </div>

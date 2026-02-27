@@ -23,6 +23,16 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const [batchQueue, setBatchQueue] = useState<any[]>([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
 
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const expiryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+      if (expiryTimeoutRef.current) clearTimeout(expiryTimeoutRef.current);
+    };
+  }, []);
+
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
     title: string;
@@ -261,7 +271,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       });
     });
 
-    setTimeout(async () => {
+    scanTimeoutRef.current = setTimeout(async () => {
       try {
         const base64Images = await Promise.all(promises);
         const results = await recognizeItemFromImage(base64Images, aiContext);
@@ -302,7 +312,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
 
     setIsExpiryAiLoading(true);
 
-    setTimeout(() => {
+    expiryTimeoutRef.current = setTimeout(() => {
       const reader = new FileReader();
       reader.onload = async () => {
         try {
@@ -340,7 +350,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
-        <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-sm">
+        <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
           {isEditing ? '編輯物品' : (batchQueue.length > 0 ? '批次新增確認' : '新增物品')}
         </h2>
         {batchQueue.length > 0 && (
@@ -351,7 +361,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       </div>
 
       {!isEditing && batchQueue.length === 0 && (
-        <div className="bg-gradient-to-br from-[#007AFF] to-[#0056b3] rounded-[32px] p-6 text-white shadow-[0_12px_30px_rgba(0,122,255,0.3),inset_0_2px_2px_rgba(255,255,255,0.3)] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#007AFF] to-[#0056b3] rounded-[32px] p-6 text-white shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative overflow-hidden">
           <div className="relative z-10">
             <h3 className="text-lg font-black tracking-tighter mb-2">AI 智慧辨識 (多圖)</h3>
             <p className="text-blue-100 text-[13px] mb-4 font-bold">
@@ -392,8 +402,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {batchQueue.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 shadow-[0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
-          <div className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-2.5 rounded-2xl">
+        <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
+          <div className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-2.5 rounded-[24px]">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>
           </div>
           <div>
@@ -404,14 +414,14 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {/* 🍎 頂級玻璃大表單 */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] border border-white/40">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">物品名稱 *</label>
           <div className="relative">
             <input
               required
               type="text"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all pr-10 text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all pr-10 text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.name}
               onChange={handleNameChange}
               onBlur={handleNameBlur}
@@ -433,7 +443,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">數量</label>
             <input
               type="number"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 text-center"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.quantity === '' as any ? '' : form.quantity}
               onChange={e => {
                 const val = e.target.value;
@@ -446,7 +456,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">安全庫存</label>
             <input
               type="number"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.minThreshold === '' as any ? '' : form.minThreshold}
               onChange={e => {
                 const val = e.target.value;
@@ -463,7 +473,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">規格/容量</label>
             <input
               type="text"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.packageSize}
               onChange={e => setForm({ ...form, packageSize: e.target.value })}
               placeholder="如：500ml"
@@ -475,7 +485,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
               <input
                 type="number"
-                className="w-full pl-9 pr-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300"
+                className="w-full pl-9 pr-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.price === '' as any ? '' : (form.price ?? '')}
                 onChange={e => {
                   const val = e.target.value;
@@ -493,7 +503,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">大分類 *</label>
             <select
               required
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all appearance-none truncate text-[17px]"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 transition-all appearance-none truncate text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.2rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em`, paddingRight: `3rem` }}
               value={form.category}
               onChange={e => {
@@ -508,7 +518,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">小分類 (統計)</label>
             <input
               type="text"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-[#007AFF] transition-all text-[17px] placeholder:text-blue-300 placeholder:font-normal"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-[#007AFF] transition-all text-[17px] placeholder:text-blue-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.subCategory}
               onChange={e => setForm({ ...form, subCategory: e.target.value })}
               placeholder="如：鮮乳"
@@ -519,7 +529,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">存放位置</label>
           <select
-            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all appearance-none text-[17px]"
+            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 transition-all appearance-none text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.2rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em`, paddingRight: `3rem` }}
             value={form.location}
             onChange={e => {
@@ -556,7 +566,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             </div>
             <input
               type="date"
-              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[14px] text-center"
+              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.expiryDate}
               onChange={e => setForm({ ...form, expiryDate: e.target.value })}
             />
@@ -567,14 +577,14 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <button
                 type="button"
                 onClick={setOpenedDateToToday}
-                className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-500 px-2.5 py-1 rounded-full font-black transition-colors"
+                className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-500 px-2.5 py-1 rounded-full font-black transition-all active:scale-95"
               >
                 今天
               </button>
             </div>
             <input
               type="date"
-              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none font-bold text-slate-800 transition-all text-[14px] text-center"
+              className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.openedDate}
               onChange={e => setForm({ ...form, openedDate: e.target.value })}
             />
@@ -584,7 +594,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">其他備註</label>
           <textarea
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300"
+            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             rows={2}
             value={form.remarks}
             onChange={e => setForm({ ...form, remarks: e.target.value })}
@@ -595,7 +605,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">評價 / 心得</label>
           <textarea
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300"
+            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             rows={3}
             value={form.review}
             onChange={e => setForm({ ...form, review: e.target.value })}
@@ -603,12 +613,12 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           />
         </div>
 
-        <div className={`grid ${batchQueue.length > 0 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'} gap-3 mt-8 pt-4 border-t border-white/40`}>
+        <div className={`grid ${batchQueue.length > 0 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'} gap-3 mt-8 pt-4 border-t border-white/60`}>
           {batchQueue.length > 0 && (
             <button
               type="button"
               onClick={handleSkip}
-              className="w-full bg-white/80 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+              className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
             >
               跳過
             </button>
@@ -617,7 +627,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <button
             type="button"
             onClick={onCancel}
-            className="w-full bg-white/80 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+            className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
           >
             取消
           </button>

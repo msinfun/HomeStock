@@ -32,12 +32,12 @@ const InputModal: React.FC<InputModalProps> = ({
   return (
     <div
       /* 背景遮罩：深色毛玻璃，確保蓋住全站所有元素 */
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200"
       onClick={onCancel}
     >
       <div
         /* 🍎 彈窗本體：頂級毛玻璃 + 32px 大圓角 + 頂部高光 */
-        className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm overflow-hidden border border-white/80 animate-in zoom-in-95 duration-200"
+        className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm overflow-hidden border border-white/60 animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-8 space-y-5">
@@ -51,7 +51,7 @@ const InputModal: React.FC<InputModalProps> = ({
           <input
             ref={inputRef}
             type={inputType}
-            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] outline-none text-[17px] text-center font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF]"
+            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[17px] text-center font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all -[#007AFF]/15 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={placeholder}

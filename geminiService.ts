@@ -63,12 +63,14 @@ const RECIPE_STRICT_PROMPT = `
   1. **做法內嵌數量**：在 steps 提到食材時，必須將份量以括號嵌入，如「加入 高筋麵粉 (280g)」。
   2. **事實導向**：若圖文無步驟，steps 必須為空陣列 []。
   3. **食材一致性**：保持「食材名稱 (數量)」格式。
+  4. **份量估算**：仔細尋找是否有標示「X人份」。若無，請根據食材總重量與常理，預估這大約是幾人份的餐點，並回傳純數字（例如：2）。
 `;
 
 const RECIPE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     name: { type: Type.STRING },
+    servings: { type: Type.NUMBER },
     ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
     steps: { type: Type.ARRAY, items: { type: Type.STRING } },
     tags: { type: Type.ARRAY, items: { type: Type.STRING } },

@@ -212,7 +212,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
   }, [transactions, defs, items]);
 
   const CLASSES = {
-    CARD_HEADER: "text-xl font-black tracking-tighter text-slate-800 drop-shadow-sm",
+    CARD_HEADER: "text-xl font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]",
     ITEM_NAME: "text-[17px] font-black tracking-tight text-slate-700 leading-tight",
     METRIC_PRIMARY: "text-3xl font-black tracking-tighter text-[#007AFF]",
     METRIC_DANGER: "text-3xl font-black tracking-tighter text-[#FF3B30]",
@@ -224,7 +224,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
     <div className="space-y-6 pb-20 animate-in fade-in duration-300">
 
       {/* 🍎 頂部導覽 Tabs：iOS Segmented Control 風格 */}
-      <div className="flex p-1 bg-slate-200/50 backdrop-blur-xl rounded-full border border-white/40 shadow-inner mt-2">
+      <div className="flex p-1 bg-slate-200/50 backdrop-blur-[40px] backdrop-saturate-150 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] mt-2">
         <button onClick={() => setActiveTab('frequency')} className={`flex-1 py-2.5 rounded-full text-[13px] transition-all active:scale-[0.96] tracking-widest ${activeTab === 'frequency' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] font-black' : 'text-slate-500 font-bold hover:text-slate-700'}`}>
           頻繁採購
         </button>
@@ -239,7 +239,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
       {activeTab === 'frequency' && (
         <section className="space-y-4">
           {/* 🍎 玻璃外層大卡片 */}
-          <div className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] relative">
+          <div className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative">
             <div className="flex justify-between items-center mb-6">
               <h3 className={CLASSES.CARD_HEADER}>採購週期建議</h3>
               <div className="flex items-center gap-3">
@@ -289,10 +289,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
         <section className="space-y-4">
           <div className="grid gap-4">
             {/* 🍎 Fast Moving 卡片：翡翠綠玻璃外層 */}
-            <div className="bg-gradient-to-br from-emerald-50/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(52,199,89,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-[32px] p-6 relative">
+            <div className="bg-gradient-to-br from-emerald-50/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-6 relative">
               <div className="flex items-center gap-3.5 mb-5">
                 {/* 標題 Icon 獨立化 */}
-                <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+                <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#34C759]"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.1.243-2.143.7-3.1 1.1 1.1 2.8 2.3 2.8 3.6z" /></svg>
                 </div>
                 <div>
@@ -312,10 +312,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
             </div>
 
             {/* 🍎 Slow Moving 卡片：活力橘玻璃外層 */}
-            <div className="bg-gradient-to-br from-orange-50/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(255,149,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-[32px] p-6 relative">
+            <div className="bg-gradient-to-br from-orange-50/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-6 relative">
               <div className="flex items-center gap-3.5 mb-5">
                 {/* 標題 Icon 獨立化 */}
-                <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+                <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF9500]"><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
                 </div>
                 <div>
@@ -335,10 +335,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
             </div>
 
             {/* 🍎 Non Moving 卡片：銀石灰玻璃外層 */}
-            <div className="bg-gradient-to-br from-slate-100/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-[32px] p-6 relative">
+            <div className="bg-gradient-to-br from-slate-100/90 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-6 relative">
               <div className="flex items-center gap-3.5 mb-5 opacity-90">
                 {/* 標題 Icon 獨立化 */}
-                <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+                <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
                   <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-slate-500"><rect width="20" height="5" x="2" y="3" rx="1" /><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" /><path d="M10 12h4" /></svg>
                 </div>
                 <div>
@@ -353,7 +353,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
                     {item.name}
                   </span>
                 ))}
-                {nonMovingItems.length === 0 && <span className="text-sm font-bold text-[#34C759] bg-green-50 px-4 py-2 rounded-full border border-white shadow-sm">好棒！沒有滯銷品</span>}
+                {nonMovingItems.length === 0 && <span className="text-sm font-bold text-[#34C759] bg-green-50 px-4 py-2 rounded-full border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)]">好棒！沒有滯銷品</span>}
               </div>
             </div>
           </div>
@@ -361,25 +361,25 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
       )}
 
       {activeTab === 'waste' && (
-        <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)] relative">
+        <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative">
           <div className="flex items-center gap-3.5 mb-6">
             {/* 標題 Icon 獨立化 */}
-            <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#FF3B30]">
+            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#FF3B30]">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
             </div>
             <h3 className={CLASSES.CARD_HEADER}>浪費檢討 (近6個月)</h3>
           </div>
 
-          <div className="space-y-4">
-            {wasteGroups.length === 0 ? (
-              <div className="text-center py-10 bg-white/40 rounded-[24px] border border-dashed border-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.02)]">
-                <div className="w-16 h-16 bg-green-50 text-[#34C759] border-2 border-white shadow-sm rounded-full flex items-center justify-center mx-auto mb-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                </div>
-                <p className="text-sm font-bold text-slate-500">太棒了！近期沒有報廢紀錄</p>
+          {wasteGroups.length === 0 ? (
+            <div className="text-center py-10 bg-white/40 rounded-[24px] border border-dashed border-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.02)]">
+              <div className="w-16 h-16 bg-green-50 text-[#34C759] border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
               </div>
-            ) : (
-              wasteGroups.map((group, idx) => (
+              <p className="text-sm font-bold text-slate-500">太棒了！近期沒有報廢紀錄</p>
+            </div>
+          ) : (
+            <div className="space-y-4 pb-24">
+              {wasteGroups.map((group, idx) => (
                 /* 🍎 內部卡片：極簡白板 */
                 <div key={idx} className="group bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] p-5 hover:bg-white transition-all">
                   <div className="flex justify-between items-end mb-3">
@@ -402,9 +402,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({ items, transactions, defs }
                     />
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>

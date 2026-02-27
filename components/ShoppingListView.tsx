@@ -59,6 +59,7 @@ const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onTog
   };
 
   const handleTouchEnd = () => {
+    setIsSwiping(false);
     if (offsetX < -threshold / 2) {
       setOffsetX(-threshold);
       setSwipedOpen(true);
@@ -90,7 +91,7 @@ const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onTog
 
       {/* 🍎 項目內容：修復高度！加入 py-4 px-5 與 min-h-[72px] 保證 iOS 標準觸控高度 */}
       <div
-        className={`flex items-center gap-4 py-4 px-5 min-h-[72px] transition-all duration-300 relative z-10 cursor-pointer ${item.isChecked ? 'bg-slate-50' : 'bg-white/95 hover:bg-slate-50/50'}`}
+        className={`flex items-center gap-4 py-4 px-5 min-h-[72px] transition-all duration-300 relative z-10 cursor-pointer ${item.isChecked ? 'bg-slate-50' : 'bg-white/90 hover:bg-slate-50/50'}`}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -136,7 +137,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const filteredItems = useMemo(() => {
     let itemsToSearch: string[] = [];
     if (activeCategory === '歷史記錄') {
-      const historyNames = Array.from(new Set(existingItems.map(i => i.name)));
+      const historyNames = Array.from(new Set(existingItems.map(i => (i as any).name || i.name))) as string[];
       itemsToSearch = historyNames;
     } else {
       itemsToSearch = CATEGORY_MAP[activeCategory] || [];
@@ -149,15 +150,15 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   }, [activeCategory, searchTerm, existingItems]);
 
   return (
-    <div className="-mt-4 space-y-6 pb-32 animate-in fade-in duration-300">
+    <div className="-mt-4 space-y-6 pb-24 animate-in fade-in duration-300">
 
       {/* 頂部乾淨標題 */}
       <div className="flex items-center gap-3.5 px-2">
-        <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
+        <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
         </div>
         <div>
-          <h2 className="text-[24px] font-black tracking-tighter text-slate-800 drop-shadow-sm leading-none">待買清單</h2>
+          <h2 className="text-[24px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)] leading-none">待買清單</h2>
           {totalCount > 0 && (
             <p className="text-[11px] font-black tracking-widest text-slate-400 mt-2 uppercase">
               已完成 {completedCount} / {totalCount} 項
@@ -170,14 +171,14 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       <div>
         {shoppingList.length === 0 ? (
           <div className="text-center py-12 bg-white/40 rounded-[32px] border border-dashed border-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.02)]">
-            <div className="w-16 h-16 bg-blue-50 text-[#007AFF] border-2 border-white shadow-sm rounded-full flex items-center justify-center mx-auto mb-3">
+            <div className="w-16 h-16 bg-blue-50 text-[#007AFF] border-2 border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full flex items-center justify-center mx-auto mb-3">
               <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
             </div>
             <p className="text-[15px] font-black text-slate-600 tracking-wide">購物清單空空如也</p>
             <p className="text-xs font-bold text-slate-400 mt-1">點擊下方按鈕快速加入待買物品</p>
           </div>
         ) : (
-          <div className="bg-white/95 border border-white/60 shadow-[0_8px_24px_rgba(0,0,0,0.04)] rounded-[32px] overflow-hidden flex flex-col">
+          <div className="bg-white/90 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] overflow-hidden flex flex-col">
             {shoppingList.map(item => (
               <ShoppingItemRow
                 key={item.id}
@@ -194,13 +195,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 底部使用小撇步區塊 */}
       {shoppingList.length > 0 && (
-        <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/40 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1),inset_2px_0_4px_rgba(255,255,255,0.5),inset_0_-1px_1px_rgba(255,255,255,0.2)]">
+        <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]">
           <div className="flex gap-3.5 items-start">
-            <div className="p-2.5 bg-white/90 backdrop-blur-sm rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
+            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
             </div>
             <div>
-              <h3 className="text-[16px] font-black tracking-tighter text-slate-800 mb-1.5 drop-shadow-sm">使用小撇步</h3>
+              <h3 className="text-[16px] font-black tracking-tighter text-slate-800 mb-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">使用小撇步</h3>
               <ul className="text-[13px] text-slate-500 font-bold space-y-1.5 list-disc list-inside leading-relaxed">
                 <li>買完後點擊圓圈打勾。</li>
                 <li>向左滑動可以刪除項目。</li>
@@ -213,13 +214,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 快速新增彈窗 (Slide-up Modal) */}
       {showAddQuickItem && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/80 flex flex-col h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
 
             {/* 標題與關閉按鈕 */}
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-white/50">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-white/80">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">快速加入待買</h3>
-              <button onClick={onCloseAddQuickItem} className="p-2.5 bg-white border border-white shadow-sm rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
+              <button onClick={onCloseAddQuickItem} className="p-2.5 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </button>
             </div>
@@ -231,7 +232,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 <input
                   autoFocus
                   type="text"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-full bg-white border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-full bg-white border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="搜尋物品..."
@@ -263,7 +264,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   <button
                     key={name}
                     onClick={() => onAddQuickItem(name, activeCategory === '歷史記錄' ? '其他' : activeCategory)}
-                    className="p-4 bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-[20px] text-left hover:border-[#007AFF]/30 hover:shadow-md active:scale-95 transition-all group"
+                    className="p-4 bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-[20px] text-left hover:border-[#007AFF]/30 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
                   >
                     <span className="block text-[15px] font-black text-slate-700 group-hover:text-[#007AFF] truncate">{name}</span>
                     <span className="text-[10px] font-bold text-slate-400 mt-1 block tracking-widest">{activeCategory === '歷史記錄' ? '從歷史記錄' : activeCategory}</span>
@@ -276,7 +277,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                       onAddQuickItem(searchTerm.trim(), activeCategory === '歷史記錄' ? '其他' : activeCategory);
                       setSearchTerm('');
                     }}
-                    className="col-span-2 p-4 bg-blue-50/80 border border-white shadow-sm rounded-[20px] text-center active:scale-95 transition-all hover:bg-blue-100"
+                    className="col-span-2 p-4 bg-blue-50/80 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[20px] text-center active:scale-95 transition-all hover:bg-blue-100"
                   >
                     <span className="block text-[15px] font-black text-[#007AFF]">新增「{searchTerm}」</span>
                     <span className="text-[10px] font-bold text-blue-400 mt-1 block tracking-widest">點擊手動加入清單</span>

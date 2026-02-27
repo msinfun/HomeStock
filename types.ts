@@ -64,6 +64,7 @@ export interface ShoppingItem {
 export interface Recipe {
   id: string;
   name: string;
+  servings?: number; // 幾人份
   ingredients: string[];
   steps: string;
   tags: string[]; // Merged tags (cuisine, dishType, attributes)

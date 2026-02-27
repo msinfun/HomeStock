@@ -13,6 +13,7 @@ interface RecipeViewProps {
   onEdit: (recipe: Recipe) => void;
   onUpdate: (recipe: Recipe) => void;
   onAddToShopping: (name: string) => void;
+  onDuplicate: (recipe: Recipe) => void;
 }
 
 interface BatchEditState {
@@ -96,9 +97,11 @@ const RecipeCard: React.FC<{
   onDeleteRequest: () => void;
   onAddToShopping: (name: string) => void;
   onUpdate: (recipe: Recipe) => void;
+  onDuplicate: () => void;
+  onShareSuccess: () => void;
   isActiveSwipe?: boolean;
   onSwipeStart?: () => void;
-}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping, onUpdate, isActiveSwipe, onSwipeStart }) => {
+}> = ({ recipe, inventoryItems, shoppingList, isBatchMode, isSelected, viewMode, onToggleSelection, onEdit, onDeleteRequest, onAddToShopping, onUpdate, onDuplicate, onShareSuccess, isActiveSwipe, onSwipeStart }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'steps' | 'review'>('ingredients');
   const [costBreakdownExpanded, setCostBreakdownExpanded] = useState(false);
@@ -118,12 +121,45 @@ const RecipeCard: React.FC<{
     currentCost: string;
   }>({ isOpen: false, ingredientName: '', currentCost: '' });
 
-  const [modalConfig, setModalConfig] = useState({ isOpen: false, title: '', message: '', isAlert: false, onConfirm: () => { } });
-
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
   const threshold = 70;
+
+  const handleShareRecipe = () => {
+    const urlText = recipe.sourceLink ? `\n🔗 連結：\n${recipe.sourceLink}\n` : '';
+
+    let estimationText = '';
+    const est = estimationResult || (recipe as any).cachedEstimation;
+    if (est) {
+      estimationText = `\n\n💰 預估成本：$${Math.round(est.totalCost)}\n🔥 總熱量：${est.nutrition.calories} kcal\n🥩 蛋白質：${est.nutrition.protein}g | 🍚 碳水：${est.nutrition.carbs}g | 🧈 脂肪：${est.nutrition.fat}g`;
+    }
+
+    const stepsArray = recipe.steps.split('\n').filter(s => s.trim().length > 0);
+    const numberedSteps = stepsArray.map((s, i) => `${i + 1}. ${s}`).join('\n');
+
+    const servingsText = recipe.servings ? ` (${recipe.servings}人份)` : '';
+    const text = `🍽️ ${recipe.name}${servingsText}\n${urlText}\n🛒 食材列表：\n${recipe.ingredients.map(i => `• ${i}`).join('\n')}\n\n📝 作法清單：\n${numberedSteps}${estimationText}`;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        onShareSuccess();
+      });
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        onShareSuccess();
+      } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+      }
+      document.body.removeChild(textArea);
+    }
+  };
 
   useEffect(() => {
     if (!isActiveSwipe) {
@@ -172,13 +208,7 @@ const RecipeCard: React.FC<{
       onUpdate({ ...recipe, cachedEstimation: result } as Recipe);
     } catch (error) {
       console.error("估算失敗:", error);
-      setModalConfig({
-        isOpen: true,
-        title: 'AI 伺服器忙碌中',
-        message: '目前估算服務負載較高 (503 錯誤)，請稍等幾分鐘後再試一次！',
-        isAlert: true,
-        onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
-      });
+      alert('AI 伺服器忙碌中: 目前估算服務負載較高 (503 錯誤)，請稍等幾分鐘後再試一次！');
     } finally {
       setIsEstimating(false);
     }
@@ -309,7 +339,7 @@ const RecipeCard: React.FC<{
         onTouchStart={handleCookTouchStart}
         onTouchEnd={handleCookTouchEnd}
       >
-        <div className="pt-14 pb-4 px-6 flex justify-between items-center border-b border-white/10">
+        <div className="pt-14 pb-4 px-6 flex justify-between items-center border-b border-white/60">
           <button onClick={() => setIsCookingMode(false)} className="text-slate-900 font-black text-sm bg-white px-5 py-2.5 rounded-full active:scale-95 transition-all shadow-[0_4px_12px_rgba(255,255,255,0.15)]">
             結束
           </button>
@@ -319,7 +349,7 @@ const RecipeCard: React.FC<{
 
         <div className="px-8 pt-10">
           <h2 className="text-2xl font-black text-white mb-6 text-center leading-tight">{recipe.name}</h2>
-          <div className="h-2.5 bg-white/10 rounded-full overflow-hidden shadow-inner">
+          <div className="h-2.5 bg-white/10 rounded-full overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
             <div
               className="h-full bg-[#007AFF] transition-all duration-500 ease-out shadow-[0_0_12px_rgba(0,122,255,0.6)]"
               style={{ width: `${formattedSteps.length > 0 ? ((cookingStepIndex + 1) / formattedSteps.length) * 100 : 100}%` }}
@@ -362,18 +392,18 @@ const RecipeCard: React.FC<{
   // 🍎 Review 模式 (心得簡化卡片)：完全對齊一般模式的內外雙層結構
   if (viewMode === 'review') {
     return (
-      <div className="relative overflow-hidden group rounded-[32px] border border-white/40 shadow-[0_12px_32px_rgba(0,0,0,0.05),inset_0_2px_2px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(255,255,255,0.2)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+      <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
         <div
           onClick={(e) => {
             e.stopPropagation();
             if (isBatchMode) onToggleSelection(recipe.id);
             else onEdit();
           }}
-          className={`transition-all duration-300 relative z-10 cursor-pointer p-5 h-full ${isSelected && isBatchMode ? 'bg-white/50 ring-2 ring-[#007AFF]' : 'hover:bg-white/30'}`}
+          className={`transition-all duration-300 relative z-10 cursor-pointer p-5 h-full ${isSelected && isBatchMode ? 'bg-white/80 ring-2 ring-[#007AFF]' : 'hover:bg-white/80'}`}
         >
           {isBatchMode && (
             <div className="absolute top-5 left-4 z-10">
-              <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-md shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
+              <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)] shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
                 {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
               </div>
             </div>
@@ -400,7 +430,7 @@ const RecipeCard: React.FC<{
 
   return (
     // 🍎 外層大卡片：頂級毛玻璃 + 光學邊緣
-    <div className="relative overflow-hidden group rounded-[32px] border border-white/40 shadow-[0_12px_32px_rgba(0,0,0,0.05),inset_0_2px_2px_rgba(255,255,255,1),inset_0_-1px_1px_rgba(255,255,255,0.2)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+    <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
       {!isBatchMode && (
         <div
           className={`absolute inset-0 bg-[#FF3B30] flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
@@ -420,7 +450,7 @@ const RecipeCard: React.FC<{
 
       <div
         // 🍎 內層容器：透明懸浮感
-        className={`transition-all duration-300 relative z-10 ${isOpen || isSelected ? 'bg-white/50' : 'hover:bg-white/30'} p-5`}
+        className={`transition-all duration-300 relative z-10 ${isOpen || isSelected ? 'bg-white/80' : 'hover:bg-white/80'} p-5`}
         style={{ transform: `translateX(${offsetX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -433,16 +463,23 @@ const RecipeCard: React.FC<{
       >
         {isBatchMode && (
           <div className="absolute top-5 left-4 z-10">
-            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-md shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
+            <div className={`w-6 h-6 rounded-full border flex items-center justify-center transition-colors ${isSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)] shadow-blue-500/20' : 'bg-white border-slate-300'}`}>
               {isSelected && <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
             </div>
           </div>
         )}
 
         <div className={`${isBatchMode ? 'pl-8' : ''}`}>
-          <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight mb-2.5 break-all">
-            {recipe.name}
-          </h3>
+          <div className="flex items-start justify-between gap-3 mb-2.5">
+            <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight break-all">
+              {recipe.name}
+            </h3>
+            {recipe.servings && (
+              <span className="shrink-0 text-[11px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black tracking-widest border border-blue-100/50 shadow-[0_1px_2px_rgba(0,122,255,0.05)]">
+                {recipe.servings} 人份
+              </span>
+            )}
+          </div>
 
           <div className="flex flex-wrap gap-2 mb-1">
             {recipe.tags && recipe.tags.length > 0 ? (
@@ -456,7 +493,7 @@ const RecipeCard: React.FC<{
                 </span>
               ))
             ) : (
-              <span className="text-[10px] bg-slate-50/80 text-slate-400 px-2.5 py-1 rounded-full font-black border border-white/50 whitespace-nowrap tracking-widest">
+              <span className="text-[10px] bg-slate-50/80 text-slate-400 px-2.5 py-1 rounded-full font-black border border-white/60 whitespace-nowrap tracking-widest">
                 無標籤
               </span>
             )}
@@ -467,22 +504,22 @@ const RecipeCard: React.FC<{
           <div className="mt-5 mb-2 space-y-4 animate-in slide-in-from-top-2 duration-300 cursor-default" onClick={(e) => e.stopPropagation()}>
 
             {/* 🍎 分頁切換 (Segmented Control)：iOS 內建風格 */}
-            <div className="flex bg-slate-200/50 p-1.5 rounded-full border border-white/40 shadow-inner">
+            <div className="flex bg-slate-200/50 p-1.5 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
               <button
                 onClick={() => setActiveTab('ingredients')}
-                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'ingredients' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/80' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'ingredients' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/60' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 備料與成本
               </button>
               <button
                 onClick={() => setActiveTab('steps')}
-                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'steps' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/80' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'steps' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/60' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 做法
               </button>
               <button
                 onClick={() => setActiveTab('review')}
-                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'review' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/80' : 'text-slate-500 hover:text-slate-700'}`}
+                className={`flex-1 py-2.5 text-[13px] tracking-widest font-black rounded-full transition-all duration-300 ${activeTab === 'review' ? 'bg-white text-[#007AFF] shadow-[0_2px_8px_rgba(0,0,0,0.05)] border border-white/60' : 'text-slate-500 hover:text-slate-700'}`}
               >
                 心得
               </button>
@@ -513,8 +550,9 @@ const RecipeCard: React.FC<{
                     type="number"
                     step="0.1"
                     min="0.1"
-                    className="w-full h-full pl-2 pr-5 text-xs font-black tracking-widest text-center bg-slate-100 rounded-full outline-none focus:bg-white focus:border-[#007AFF] focus:ring-2 focus:ring-[#007AFF]/20 transition-all text-slate-700"
+                    className="w-full h-full pl-2 pr-5 text-xs font-black tracking-widest text-center bg-slate-100 rounded-full focus:bg-white -[#007AFF]/20 transition-all text-slate-700 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                     value={scaleFactor}
+                    onWheel={e => e.currentTarget.blur()}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
                       if (!isNaN(val) && val > 0) setScaleFactor(val);
@@ -553,7 +591,7 @@ const RecipeCard: React.FC<{
                   {finalEstimation && !isEstimating && (
                     <div className="bg-white/90 border border-white/60 rounded-[28px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                       <div className="flex gap-3 mb-4">
-                        <div className="flex-1 bg-emerald-50 rounded-[20px] p-4 flex flex-col justify-between">
+                        <div className="flex-1 bg-green-50 rounded-[20px] p-4 flex flex-col justify-between">
                           <span className="text-[10px] font-black text-emerald-600 tracking-widest uppercase">總成本</span>
                           <div className="flex items-baseline gap-0.5 text-emerald-700 mt-1"><span className="text-sm font-bold">$</span><span className="text-3xl font-black leading-none">{Math.round(finalEstimation.totalCost)}</span></div>
                         </div>
@@ -579,7 +617,7 @@ const RecipeCard: React.FC<{
                         {costBreakdownExpanded && (
                           <div className="px-3 pb-3 pt-1 space-y-1.5 animate-in slide-in-from-top-2">
                             {finalEstimation.ingredients.map((ing, idx) => (
-                              <button key={idx} onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }} className="w-full flex justify-between items-center bg-white px-3 py-2.5 rounded-[16px] active:scale-[0.98] transition-all border border-transparent hover:border-[#007AFF]/30 group shadow-sm">
+                              <button key={idx} onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }} className="w-full flex justify-between items-center bg-white px-3 py-2.5 rounded-[16px] active:scale-[0.98] transition-all border border-transparent hover:border-[#007AFF]/30 group shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                                 <div className="text-left flex items-center gap-2">
                                   <div className={`w-2 h-2 rounded-full ${ing.source === 'inventory' ? 'bg-emerald-400' : 'bg-slate-300'}`}></div>
                                   <span className="text-[14px] text-slate-700 font-black">{ing.name} <span className="text-[10px] text-slate-400 font-bold ml-1">{ing.amount}</span></span>
@@ -606,7 +644,7 @@ const RecipeCard: React.FC<{
                             <div className="flex-1 mr-3 min-w-0">
                               <span className={`text-[14px] font-black tracking-wide block break-words leading-relaxed ${isAvailable ? 'text-slate-800' : 'text-slate-500'}`}>{ingItem.display}</span>
                               {status.found ? (
-                                <span className={`text-[10px] font-black tracking-widest block mt-1 ${status.quantity > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>庫存: {status.quantity}</span>
+                                <span className={`text-[10px] font-black tracking-widest block mt-1 ${status.quantity > 0 ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>庫存: {status.quantity}</span>
                               ) : (
                                 <span className="text-[9px] font-black tracking-widest mt-1 inline-block text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">無紀錄</span>
                               )}
@@ -664,13 +702,19 @@ const RecipeCard: React.FC<{
         )}
 
         {!isBatchMode && (
-          <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/40">
+          <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/60">
             <div className="flex items-center gap-2">
-              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-sm transition-all rounded-full active:scale-95" title="編輯">
+              <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="編輯">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
               </button>
+              <button onClick={(e) => { e.stopPropagation(); onDuplicate(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="複製副本">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
+              </button>
+              <button onClick={(e) => { e.stopPropagation(); handleShareRecipe(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="分享與複製文字">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>
+              </button>
               {recipe.sourceLink && (
-                <a href={recipe.sourceLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-sm transition-all rounded-full active:scale-95" title="來源連結">
+                <a href={recipe.sourceLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="來源連結">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                 </a>
               )}
@@ -693,20 +737,12 @@ const RecipeCard: React.FC<{
         onConfirm={confirmPriceEdit}
         onCancel={() => setPriceEditModal({ ...priceEditModal, isOpen: false })}
       />
-
-      <ConfirmationModal
-        isOpen={modalConfig.isOpen}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        onConfirm={modalConfig.onConfirm}
-        onCancel={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
-      />
     </div>
   );
 };
 
 const RecipeView: React.FC<RecipeViewProps> = ({
-  recipes, inventoryItems, shoppingList, recipeTags, onDelete, onEdit, onUpdate, onAddToShopping
+  recipes, inventoryItems, shoppingList, recipeTags, onDelete, onEdit, onUpdate, onAddToShopping, onDuplicate
 }) => {
   const getInitialState = () => {
     try {
@@ -825,10 +861,10 @@ const RecipeView: React.FC<RecipeViewProps> = ({
   return (
     <div className="-mt-6 space-y-0 pb-24">
       {/* 🍎 頂部導覽與搜尋：統一的毛玻璃懸浮列 */}
-      <div className="sticky top-0 bg-white/60 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/40 shadow-[0_4px_20px_rgba(0,0,0,0.02)] -mx-4 px-4 h-16 flex items-center gap-3">
+      <div className="sticky top-0 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] -mx-4 px-4 h-16 flex items-center gap-3">
         <div className="relative flex-1 h-11 group">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-          <input type="text" placeholder="搜尋食譜..." className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-2 focus:ring-[#007AFF]/20 focus:border-[#007AFF] outline-none transition-all placeholder:font-normal placeholder:text-slate-400" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="text" placeholder="搜尋食譜..." className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 transition-all placeholder:font-normal placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={search} onChange={(e) => setSearch(e.target.value)} />
 
           <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-95 ${isFilterOpen || selectedTags.size > 0 ? 'text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'text-slate-400 hover:bg-slate-100'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
@@ -839,10 +875,10 @@ const RecipeView: React.FC<RecipeViewProps> = ({
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/80 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
+              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
                 <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                   <h3 className="font-black tracking-tighter text-slate-900 text-base flex items-center gap-2">標籤篩選</h3>
-                  {selectedTags.size > 0 && <button onClick={clearFilters} className="text-xs text-rose-500 font-black hover:bg-rose-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">清除 ({selectedTags.size})</button>}
+                  {selectedTags.size > 0 && <button onClick={clearFilters} className="text-xs text-[#FF3B30] font-black hover:bg-red-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">清除 ({selectedTags.size})</button>}
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
                   {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => {
@@ -852,9 +888,9 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
                     return (
                       <div key={parent} className="rounded-[20px] overflow-hidden">
-                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white transition-all border border-transparent hover:border-white hover:shadow-sm ${someSelected ? 'bg-blue-50/50' : ''}`}>
+                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${someSelected ? 'bg-blue-50/50' : ''}`}>
                           <div className="flex items-center justify-center w-6 h-6 mr-3 cursor-pointer active:scale-90 transition-transform" onClick={() => toggleParentGroup(parent)}>
-                            <div className={`w-5 h-5 border-[1.5px] rounded-full flex items-center justify-center transition-colors ${allSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-sm' : (someSelected ? 'bg-[#007AFF] border-[#007AFF]' : 'border-slate-300 bg-white')}`}>
+                            <div className={`w-5 h-5 border-[1.5px] rounded-full flex items-center justify-center transition-colors ${allSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : (someSelected ? 'bg-[#007AFF] border-[#007AFF]' : 'border-slate-300 bg-white')}`}>
                               {allSelected && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                               {!allSelected && someSelected && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
                             </div>
@@ -869,8 +905,8 @@ const RecipeView: React.FC<RecipeViewProps> = ({
                             {children.map((child: string) => {
                               const isSubSelected = selectedTags.has(child);
                               return (
-                                <div key={child} className="flex items-center p-2 hover:bg-white rounded-2xl cursor-pointer transition-all border border-transparent hover:border-white hover:shadow-sm" onClick={() => toggleTag(child)}>
-                                  <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-sm' : 'border-slate-300 bg-white'}`}>
+                                <div key={child} className="flex items-center p-2 hover:bg-white rounded-[24px] cursor-pointer transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]" onClick={() => toggleTag(child)}>
+                                  <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'border-slate-300 bg-white'}`}>
                                     {isSubSelected && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                                   </div>
                                   <span className={`text-[13px] font-black tracking-wide ${isSubSelected ? 'text-[#007AFF]' : 'text-slate-500'}`}>{child} <span className="text-slate-400 font-bold ml-1">({tagCounts.tags[child] || 0})</span></span>
@@ -883,17 +919,17 @@ const RecipeView: React.FC<RecipeViewProps> = ({
                     )
                   })}
                 </div>
-                <div className="p-5 bg-white/60 border-t border-slate-100 shrink-0 sticky bottom-0 backdrop-blur-md">
+                <div className="p-5 bg-white/90 border-t border-slate-100 shrink-0 sticky bottom-0 backdrop-blur-[40px] backdrop-saturate-150">
                   <button onClick={() => setIsFilterOpen(false)} className="w-full py-4 bg-[#007AFF] text-white font-black tracking-widest rounded-full text-[15px] shadow-[0_4px_12px_rgba(0,122,255,0.2)] border-none hover:bg-blue-600 active:scale-[0.96] transition-all">確定套用</button>
                 </div>
               </div>
             </>
           )}
         </div>
-        <button onClick={() => setIsBatchMode(!isBatchMode)} className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border border-white shadow-sm ${isBatchMode ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'bg-white/80 text-[#007AFF] hover:bg-white'}`} title="批次修改">
+        <button onClick={() => setIsBatchMode(!isBatchMode)} className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${isBatchMode ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'bg-white/80 text-[#007AFF] hover:bg-white'}`} title="批次修改">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 11 3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></svg>
         </button>
-        <button onClick={() => setIsViewMenuOpen(true)} className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border border-white shadow-sm ${viewMode === 'review' ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'bg-white/80 text-[#007AFF] hover:bg-white'}`}>
+        <button onClick={() => setIsViewMenuOpen(true)} className={`h-11 w-11 flex items-center justify-center rounded-full transition-all active:scale-95 shrink-0 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${viewMode === 'review' ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'bg-white/80 text-[#007AFF] hover:bg-white'}`}>
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="21" y2="21" /><line x1="4" x2="20" y1="3" y2="3" /><line x1="4" x2="20" y1="12" y2="12" /><circle cx="14" cy="3" r="2" /><circle cx="8" cy="12" r="2" /><circle cx="16" cy="21" r="2" /></svg>
         </button>
       </div>
@@ -901,14 +937,14 @@ const RecipeView: React.FC<RecipeViewProps> = ({
       <div className="h-4 w-full shrink-0"></div>
       <div className="pb-20">
         {filteredRecipes.length === 0 ? (
-          <div className="text-center py-20 text-slate-500 bg-white/60 backdrop-blur-xl rounded-[32px] border border-white/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
+          <div className="text-center py-20 text-slate-500 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]">
             <p className="font-black text-lg tracking-tighter text-slate-700">沒有符合的食譜</p>
             <p className="text-sm font-bold mt-1">試試看調整篩選條件</p>
           </div>
         ) : (
           filteredRecipes.map(recipe => (
             <div key={recipe.id} className="mb-4">
-              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} isActiveSwipe={activeSwipeId === recipe.id} onSwipeStart={() => setActiveSwipeId(recipe.id)} />
+              <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDuplicate={() => onDuplicate(recipe)} onShareSuccess={() => setConfirmConfig({ isOpen: true, title: '複製成功', message: '食譜文字已經複製，可以貼給朋友囉！', isAlert: true, onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} isActiveSwipe={activeSwipeId === recipe.id} onSwipeStart={() => setActiveSwipeId(recipe.id)} />
             </div>
           ))
         )}
@@ -916,11 +952,11 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 批次操作列：毛玻璃懸浮 */}
       {isBatchMode && (
-        <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur-2xl border border-white/80 px-4 py-2.5 rounded-full shadow-[0_12px_40px_rgba(0,0,0,0.1)] z-[60] animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-[100px] left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 px-4 py-2.5 rounded-full shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] z-[60] animate-in slide-in-from-bottom-5">
           <span className="text-sm font-black text-[#007AFF] tracking-widest mr-2 whitespace-nowrap shrink-0">{selectedIds.size} 已選</span>
           <button onClick={() => setBatchEditModal({ type: 'tags' })} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-black transition-colors active:scale-95 whitespace-nowrap shrink-0">+ 標籤</button>
           <div className="w-px h-5 bg-slate-200 mx-1"></div>
-          <button onClick={cancelBatchMode} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full transition-colors active:scale-95 shrink-0">
+          <button onClick={cancelBatchMode} className="p-2 text-slate-400 hover:text-[#FF3B30] hover:bg-red-50 rounded-full transition-all active:scale-95 shrink-0">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
           </button>
         </div>
@@ -928,10 +964,10 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 批次修改標籤彈窗 */}
       {batchEditModal.type && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/80 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-6 text-center whitespace-nowrap">批次新增標籤</h3>
-            <input autoFocus type="text" className="w-full px-5 py-4 rounded-full border border-white/60 bg-white/90 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[17px] font-bold outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] mb-6 transition-all text-center" value={batchNewTag} onChange={e => setBatchNewTag(e.target.value)} placeholder="輸入要加入的標籤..." />
+            <input autoFocus type="text" className="w-full px-5 py-4 rounded-full border border-white/60 bg-white/90 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[17px] font-bold -[#007AFF]/15 mb-6 transition-all text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={batchNewTag} onChange={e => setBatchNewTag(e.target.value)} placeholder="輸入要加入的標籤..." />
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setBatchEditModal({ type: null })} className="py-3.5 rounded-full font-black text-slate-500 bg-white border border-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] hover:bg-slate-50 active:scale-[0.96] transition-all text-[15px] tracking-widest">取消</button>
               <button onClick={handleBatchUpdate} className="py-3.5 rounded-full font-black text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-[15px] tracking-widest border-none">確認</button>
@@ -942,24 +978,24 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 檢視設定彈窗 */}
       {isViewMenuOpen && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.1),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/40 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
-              <button onClick={() => setIsViewMenuOpen(false)} className="p-2.5 bg-white border border-white shadow-sm rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
+              <button onClick={() => setIsViewMenuOpen(false)} className="p-2.5 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </button>
             </div>
             <div className="p-6 space-y-8 overflow-y-auto">
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">顯示模式</p>
-                <div className="flex items-center justify-between bg-white px-5 py-4 rounded-[24px] border border-white/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                <div className="flex items-center justify-between bg-white px-5 py-4 rounded-[24px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                   <div className="flex items-center gap-3 text-slate-800">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
                     <span className="text-[15px] font-black tracking-wide">開啟心得模式 (隱藏步驟)</span>
                   </div>
-                  <button onClick={() => setViewMode(viewMode === 'default' ? 'review' : 'default')} className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-inner ${viewMode === 'review' ? 'bg-[#34C759]' : 'bg-slate-200'}`}>
-                    <div className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform duration-300 ${viewMode === 'review' ? 'translate-x-6' : 'translate-x-0'}`} />
+                  <button onClick={() => setViewMode(viewMode === 'default' ? 'review' : 'default')} className={`w-14 h-8 rounded-full transition-colors duration-300 focus:outline-none flex items-center px-1 shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${viewMode === 'review' ? 'bg-[#34C759]' : 'bg-slate-200'}`}>
+                    <div className={`w-6 h-6 bg-white rounded-full shadow-[0_2px_10px_rgba(0,0,0,0.03)] transform transition-transform duration-300 ${viewMode === 'review' ? 'translate-x-6' : 'translate-x-0'}`} />
                   </button>
                 </div>
               </div>
