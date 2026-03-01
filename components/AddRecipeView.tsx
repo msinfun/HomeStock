@@ -67,51 +67,72 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
   }, [initialData]);
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    if (files.length > 5) {
+      setModalConfig({
+        isOpen: true,
+        title: '圖片數量過多',
+        message: '一次最多只能上傳 5 張圖片進行辨識喔！',
+        isAlert: true,
+        onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+      });
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
     setLoading(true);
     setLoadingMode('scan');
 
-    setTimeout(() => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          // Pass available tags to AI
-          const result = await recognizeRecipeFromImage(base64, availableFlatTags);
-          if (result && result.name) {
-            // Strict Filtering
-            const validTags = filterInvalidTags(result.tags);
+    const fileArray = Array.from(files);
 
-            setForm(prev => ({
-              ...prev,
-              name: result.name || prev.name,
-              servings: result.servings || prev.servings,
-              ingredients: result.ingredients || prev.ingredients,
-              steps: result.steps || prev.steps,
-              tags: validTags, // Enforce whitelist
-              sourceLink: result.sourceLink || prev.sourceLink
-            }));
-          } else {
-            setModalConfig({
-              isOpen: true,
-              title: '辨識失敗',
-              message: 'AI 無法辨識圖片內容，請確認圖片清晰。',
-              isAlert: true,
-              onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
-            });
-          }
-        } catch (innerError) {
-          console.error(innerError);
-        } finally {
-          setLoading(false);
-          setLoadingMode(null);
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-      };
-      reader.readAsDataURL(file);
-    }, 50);
+    try {
+      const base64Images = await Promise.all(
+        fileArray.map((file: File) => {
+          return new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64 = (reader.result as string).split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        })
+      );
+
+      const result = await recognizeRecipeFromImage(base64Images, availableFlatTags);
+
+      if (result && result.name) {
+        // Strict Filtering
+        const validTags = filterInvalidTags(result.tags);
+
+        setForm(prev => ({
+          ...prev,
+          name: result.name || prev.name,
+          servings: result.servings || prev.servings,
+          ingredients: result.ingredients || prev.ingredients,
+          steps: result.steps || prev.steps,
+          tags: validTags, // Enforce whitelist
+          sourceLink: result.sourceLink || prev.sourceLink
+        }));
+      } else {
+        setModalConfig({
+          isOpen: true,
+          title: '辨識失敗',
+          message: 'AI 無法辨識圖片內容，請確認圖片清晰。',
+          isAlert: true,
+          onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+        });
+      }
+    } catch (innerError) {
+      console.error(innerError);
+    } finally {
+      setLoading(false);
+      setLoadingMode(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const handleUrlAnalysis = async () => {
@@ -253,7 +274,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                   <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">拍照轉食譜</span>
                 </>
               )}
-              <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" className="hidden" />
+              <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" multiple className="hidden" />
             </button>
 
             <button
@@ -270,10 +291,16 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 </>
               ) : (
                 <>
-                  <div className="p-3 bg-white rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#FF3B30]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17" /><path d="m10 15 5-3-5-3z" /></svg>
+                  <div className="p-3 bg-white rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <line x1="10" y1="9" x2="8" y2="9" />
+                    </svg>
                   </div>
-                  <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#FF3B30] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">影片轉食譜</span>
+                  <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">文字轉食譜</span>
                 </>
               )}
             </button>
@@ -290,15 +317,15 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
       {showUrlInput && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => !loading && setShowUrlInput(false)}>
           <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">貼上連結或內容</h3>
-            <p className="text-sm text-slate-500 mb-6 font-bold text-center">AI 會自動分析 YouTube 連結、網址或文字食譜。</p>
+            <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">貼上內容</h3>
+            <p className="text-sm text-slate-500 mb-6 font-bold text-center">AI 會自動分析文字食譜。</p>
             <textarea
               autoFocus
               disabled={loading}
               className="w-full px-5 py-4 rounded-[24px] bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={urlOrText}
               onChange={e => setUrlOrText(e.target.value)}
-              placeholder="https://youtube.com/watch?v=... 或貼上文字內容"
+              placeholder="貼上文字內容"
             />
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -456,7 +483,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             value={form.steps}
             onChange={e => setForm({ ...form, steps: e.target.value })}
-            placeholder="AI 會自動分行。您也可以手動輸入：&#10;1. 準備食材...&#10;2. 起油鍋..."
+            placeholder="AI 會自動分行，您也可以手動輸入。&#10;手動輸入配方份量無法縮放：&#10;1. 準備食材...&#10;2. 起油鍋..."
           />
         </div>
 

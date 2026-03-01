@@ -34,54 +34,29 @@ const normalizeForMatch = (text: string) => {
 };
 
 // ==========================================
-// 核心升級：支援中文數字、分數、與黑名單機制的縮放引擎
+// 核心升級：純 AI 標記解析引擎 (AI Tagging)
+// 格式支援：{{60|g}}, {{1.5|大匙}}, {{2}}
 // ==========================================
-const CHINESE_NUMS: Record<string, number> = {
-  '半': 0.5, '一': 1, '二': 2, '兩': 2, '三': 3, '四': 4, '五': 5,
-  '六': 6, '七': 7, '八': 8, '九': 9, '十': 10
-};
-
 const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') => {
-  if (factor === 1 || !text) return text;
+  if (!text) return text;
 
-  // 匹配：阿拉伯數字或中文數字 + 選擇性空白 + 文字單位
-  const regex = /(\d+(?:[\.\/]\d+)?|[半一二兩三四五六七八九十])(\s*)([a-zA-Z°%\.克匙杯顆個包條片只毫升公克大匙小匙斤把根滴塊份碗鍋盆串]*)/gi;
+  // 匹配 {{數字|單位}} 或 {{數字}}
+  return text.replace(/\{\{([\d.]+)(?:\|([^}]+))?\}\}/g, (match, numStr, unitStr) => {
+    const num = parseFloat(numStr);
+    if (isNaN(num)) return match; // 防呆機制
 
-  return text.replace(regex, (match, numStr, space, unit, offset, fullText) => {
-    const nextChar = fullText.charAt(offset + match.length);
+    const unit = unitStr ? unitStr.trim() : '';
+    const scaled = num * factor;
+    // 解決浮點數精度，並消除整數多餘的 .00
+    const scaledStr = scaled % 1 === 0 ? scaled.toString() : parseFloat(scaled.toFixed(2)).toString();
 
-    // 防禦機制 1：排除步驟標號
-    if (['.', '。', '、', ')', '）'].includes(nextChar) && unit.trim() === '') return match;
-    if (offset === 0 && unit.trim() === '') return match;
-    const prevText = fullText.substring(Math.max(0, offset - 3), offset);
-    if (/(第|步|驟)/.test(prevText)) return match;
-
-    // 防禦機制 2：黑名單制度
-    const lowerUnit = unit.toLowerCase().trim();
-    const isBlacklisted = /(度|分|時|秒|hr|min|sec|瓦|w|檔|速|cm|公分|吋|寸|人份|天|%|^c$|^f$|°c|°f)/.test(lowerUnit);
-    if (isBlacklisted) return match;
-
-    // 解析數字 (支援中文映射)
-    let val = 0;
-    if (CHINESE_NUMS[numStr] !== undefined) {
-      val = CHINESE_NUMS[numStr];
-    } else if (numStr.includes('/')) {
-      const parts = numStr.split('/');
-      const numerator = parseFloat(parts[0]);
-      const denominator = parseFloat(parts[1]);
-      if (denominator === 0 || isNaN(numerator) || isNaN(denominator)) return match;
-      val = numerator / denominator;
-    } else {
-      val = parseFloat(numStr);
+    // 如果倍率不是 1，且是食材清單模式，顯示箭頭變化 (例如：60g ➔ 120g)
+    if (format === 'arrow' && factor !== 1) {
+      return `${numStr}${unit} ➔ ${scaledStr}${unit}`;
     }
 
-    if (isNaN(val)) return match;
-
-    // 縮放並四捨五入到小數第一位
-    let scaled = Math.round((val * factor) * 10) / 10;
-
-    if (format === 'arrow') return `${match} ➝ ${scaled}${space}${unit}`;
-    return `${scaled}${space}${unit}`;
+    // 如果倍率是 1，或是作法步驟模式，直接顯示計算後的結果 (例如：120g)
+    return `${scaledStr}${unit}`;
   });
 };
 

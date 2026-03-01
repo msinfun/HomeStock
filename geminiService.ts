@@ -59,11 +59,12 @@ const getCommonPromptRules = (categories: string[]) => {
 };
 
 const RECIPE_STRICT_PROMPT = `
-  **[嚴格資料提取規則]**
-  1. **做法內嵌數量**：在 steps 提到食材時，必須將份量以括號嵌入，如「加入 高筋麵粉 (280g)」。
-  2. **事實導向**：若圖文無步驟，steps 必須為空陣列 []。
-  3. **食材一致性**：保持「食材名稱 (數量)」格式。
-  4. **份量估算**：仔細尋找是否有標示「X人份」。若無，請根據食材總重量與常理，預估這大約是幾人份的餐點，並回傳純數字（例如：2）。
+  **[嚴格資料提取與標記規則 - 必讀]**
+  1. **份量智能標記 (AI Tagging)**：在 \`ingredients\` (食材清單) 與 \`steps\` (作法步驟) 中，只要遇到「需要隨份量縮放的食材數字」，一律使用 \`{{數字|單位}}\` 的格式標記。例如：\`{{60|g}}\`, \`{{1.5|大匙}}\`, \`{{2|顆}}\`。若無單位請標記為 \`{{2}}\`。
+  2. **絕對不標記**：溫度、時間、容器尺寸、攪拌次數等「不可縮放」的數字，絕對不要加上標記！例如保持「180度」、「28x28cm」、「烤15分鐘」。
+  3. **食材一致性**：食材清單請輸出如「高筋麵粉 {{280|g}}」的格式。
+  4. **做法內嵌數量**：在 steps 提到食材時務必帶入份量並標記，如「加入 高筋麵粉 {{280|g}}」。
+  5. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（例如：2）。
 `;
 
 const RECIPE_SCHEMA = {
@@ -258,18 +259,21 @@ export async function recognizeExpiryDate(base64Image: string): Promise<string |
   } catch (error) { handleApiError(error); return null; }
 }
 
-export async function recognizeRecipeFromImage(base64Image: string, availableTags: string[] = []) {
+export async function recognizeRecipeFromImage(base64Images: string[], availableTags: string[] = []) {
   try {
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
+
+    // 將所有傳入的 Base64 圖片轉換為 Gemini 支援的格式
+    const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
         parts: [
-          { inlineData: { data: base64Image, mimeType: "image/jpeg" } },
+          ...imageParts,
           {
-            text: `Extract recipe data. ${RECIPE_STRICT_PROMPT}
+            text: `Extract recipe data from these images. If multiple images are provided, synthesize the ingredients and steps across all images into a single cohesive recipe. ${RECIPE_STRICT_PROMPT}
               **[STRICT TAGGING RULES]**
               1. You must select tags ONLY from this specific list: [${tagList}].
               2. Do NOT invent, translate, or create new tags.
