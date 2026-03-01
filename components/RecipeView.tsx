@@ -103,7 +103,11 @@ const RecipeCard: React.FC<{
   const threshold = 70;
 
   const handleShareRecipe = () => {
-    const urlText = recipe.sourceLink ? `\n🔗 連結：\n${recipe.sourceLink}\n` : '';
+    // 移除 AI 標記的輔助函式 (將 {{225|g}} 轉為 225g，{{2}} 轉為 2)
+    const removeTags = (str: string) => str.replace(/\{\{([\d.]+)(?:\|([^}]+))?\}\}/g, '$1$2');
+
+    // 更改文案為「來源」以適應非網址內容
+    const sourceText = recipe.sourceLink ? `\n📖 來源：\n${recipe.sourceLink}\n` : '';
 
     let estimationText = '';
     const est = estimationResult || (recipe as any).cachedEstimation;
@@ -111,11 +115,16 @@ const RecipeCard: React.FC<{
       estimationText = `\n\n💰 預估成本：$${Math.round(est.totalCost)}\n🔥 總熱量：${est.nutrition.calories} kcal\n🥩 蛋白質：${est.nutrition.protein}g | 🍚 碳水：${est.nutrition.carbs}g | 🧈 脂肪：${est.nutrition.fat}g`;
     }
 
-    const stepsArray = recipe.steps.split('\n').filter(s => s.trim().length > 0);
+    // 清除作法與食材中的標記
+    const cleanSteps = removeTags(recipe.steps);
+    const stepsArray = cleanSteps.split('\n').filter(s => s.trim().length > 0);
     const numberedSteps = stepsArray.map((s, i) => `${i + 1}. ${s}`).join('\n');
 
     const servingsText = recipe.servings ? ` (${recipe.servings}人份)` : '';
-    const text = `🍽️ ${recipe.name}${servingsText}\n${urlText}\n🛒 食材列表：\n${recipe.ingredients.map(i => `• ${i}`).join('\n')}\n\n📝 作法清單：\n${numberedSteps}${estimationText}`;
+    const ingredientsText = recipe.ingredients.map(i => `• ${removeTags(i)}`).join('\n');
+
+    const text = `🍽️ ${recipe.name}${servingsText}\n${sourceText}\n🛒 食材列表：\n${ingredientsText}\n\n📝 作法清單：\n${numberedSteps}${estimationText}`;
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(() => {
         onShareSuccess();
@@ -450,11 +459,18 @@ const RecipeCard: React.FC<{
             <h3 className="text-[17px] font-black tracking-tight text-slate-800 leading-tight break-all">
               {recipe.name}
             </h3>
-            {recipe.servings && (
-              <span className="shrink-0 text-[11px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black tracking-widest border border-blue-100/50 shadow-[0_1px_2px_rgba(0,122,255,0.05)]">
-                {recipe.servings} 人份
-              </span>
-            )}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {recipe.sourceLink && !recipe.sourceLink.startsWith('http') && (
+                <span className="text-[11px] bg-slate-100 text-slate-500 px-2.5 py-1 rounded-full font-black tracking-widest border border-slate-200">
+                  來源: {recipe.sourceLink}
+                </span>
+              )}
+              {recipe.servings && (
+                <span className="text-[11px] bg-blue-50 text-[#007AFF] px-2.5 py-1 rounded-full font-black tracking-widest border border-blue-100/50 shadow-[0_1px_2px_rgba(0,122,255,0.05)]">
+                  {recipe.servings} 人份
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mb-1">
@@ -680,7 +696,7 @@ const RecipeCard: React.FC<{
               <button onClick={(e) => { e.stopPropagation(); handleShareRecipe(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="分享與複製文字">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" /></svg>
               </button>
-              {recipe.sourceLink && (
+              {recipe.sourceLink && recipe.sourceLink.startsWith('http') && (
                 <a href={recipe.sourceLink} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="來源連結">
                   <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                 </a>
