@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Recipe, InventoryItem, ShoppingItem, RecipeTagStructure } from '../types';
-import { estimateRecipeCostAndNutrition, CostNutritionResult } from '../geminiService';
+import { estimateRecipeCostAndNutrition, CostNutritionResult, recognizeRecipeFromText } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
 import InputModal from './InputModal';
 
@@ -34,29 +34,40 @@ const normalizeForMatch = (text: string) => {
 };
 
 // ==========================================
-// 核心升級：純 AI 標記解析引擎 (AI Tagging)
-// 格式支援：{{60|g}}, {{1.5|大匙}}, {{2}}
+// 核心升級：純 AI 標記解析引擎 (支援範圍數值 50-100)
 // ==========================================
 const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') => {
   if (!text) return text;
 
-  // 匹配 {{數字|單位}} 或 {{數字}}
-  return text.replace(/\{\{([\d.]+)(?:\|([^}]+))?\}\}/g, (match, numStr, unitStr) => {
-    const num = parseFloat(numStr);
-    if (isNaN(num)) return match; // 防呆機制
-
+  // 放寬正則表達式：允許數字、小數點、連字號(-)、波浪號(~)與空白
+  return text.replace(/\{\{([0-9.\-~ ]+)(?:\|([^}]+))?\}\}/g, (match, numStr, unitStr) => {
     const unit = unitStr ? unitStr.trim() : '';
-    const scaled = num * factor;
-    // 解決浮點數精度，並消除整數多餘的 .00
-    const scaledStr = scaled % 1 === 0 ? scaled.toString() : parseFloat(scaled.toFixed(2)).toString();
 
-    // 如果倍率不是 1，且是食材清單模式，顯示箭頭變化 (例如：60g ➔ 120g)
-    if (format === 'arrow' && factor !== 1) {
-      return `${numStr}${unit} ➔ ${scaledStr}${unit}`;
+    // 獨立的單一數字縮放邏輯
+    const scaleNumber = (str: string) => {
+      const num = parseFloat(str);
+      if (isNaN(num)) return str;
+      const scaled = num * factor;
+      return scaled % 1 === 0 ? scaled.toString() : parseFloat(scaled.toFixed(2)).toString();
+    };
+
+    let scaledNumStr = numStr.trim();
+
+    // 智慧拆解並縮放範圍數值
+    if (numStr.includes('-')) {
+      scaledNumStr = numStr.split('-').map(s => scaleNumber(s.trim())).join('-');
+    } else if (numStr.includes('~')) {
+      scaledNumStr = numStr.split('~').map(s => scaleNumber(s.trim())).join('~');
+    } else {
+      scaledNumStr = scaleNumber(numStr.trim());
     }
 
-    // 如果倍率是 1，或是作法步驟模式，直接顯示計算後的結果 (例如：120g)
-    return `${scaledStr}${unit}`;
+    // 如果倍率不是 1，且是食材清單模式，顯示箭頭變化 (例如：50-100g ➔ 100-200g)
+    if (format === 'arrow' && factor !== 1) {
+      return `${numStr.trim()}${unit} ➔ ${scaledNumStr}${unit}`;
+    }
+
+    return `${scaledNumStr}${unit}`;
   });
 };
 
@@ -102,9 +113,52 @@ const RecipeCard: React.FC<{
   const startX = useRef(0);
   const threshold = 70;
 
+  // --- 新增：舊版食譜一鍵 AI 升級邏輯 ---
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
+  // 智能檢查是否為舊版食譜 (食材或作法中缺乏 {{ 標記)
+  const isOldRecipe = useMemo(() => {
+    const ingredients = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+    const hasTags = ingredients.some(i => i.includes('{{')) || (typeof recipe.steps === 'string' && recipe.steps.includes('{{'));
+    return !hasTags;
+  }, [recipe.ingredients, recipe.steps]);
+
+  const handleUpgradeRecipe = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isUpgrading) return;
+    setIsUpgrading(true);
+
+    try {
+      const ingredientsList = Array.isArray(recipe.ingredients) ? recipe.ingredients : [];
+      const recipeText = `
+        食譜名稱：${recipe.name}
+        原始食材：${ingredientsList.join('、')}
+        原始作法：${recipe.steps}
+      `;
+
+      // 呼叫現有的文字轉食譜 API 重新打上智能標記
+      const upgradedData = await recognizeRecipeFromText(recipeText, []);
+
+      if (upgradedData) {
+        // 保留原本的 ID、標籤、來源、心得、庫存，僅替換需縮放的欄位
+        onUpdate({
+          ...recipe,
+          ingredients: upgradedData.ingredients,
+          steps: upgradedData.steps,
+          servings: upgradedData.servings || recipe.servings
+        });
+      }
+    } catch (error) {
+      console.error("升級失敗:", error);
+    } finally {
+      setIsUpgrading(false);
+    }
+  };
+  // ------------------------------------
+
   const handleShareRecipe = () => {
     // 移除 AI 標記的輔助函式 (將 {{225|g}} 轉為 225g，{{2}} 轉為 2)
-    const removeTags = (str: string) => str.replace(/\{\{([\d.]+)(?:\|([^}]+))?\}\}/g, '$1$2');
+    const removeTags = (str: string) => str.replace(/\{\{([0-9.\-~ ]+)(?:\|([^}]+))?\}\}/g, '$1$2');
 
     // 更改文案為「來源」以適應非網址內容
     const sourceText = recipe.sourceLink ? `\n📖 來源：\n${recipe.sourceLink}\n` : '';
@@ -687,6 +741,21 @@ const RecipeCard: React.FC<{
         {!isBatchMode && (
           <div className="flex justify-between items-center mt-5 pt-3 border-t border-white/60">
             <div className="flex items-center gap-2">
+              {/* AI 智能升級按鈕 (僅舊版食譜顯示) */}
+              {isOldRecipe && (
+                <button
+                  onClick={handleUpgradeRecipe}
+                  disabled={isUpgrading}
+                  className={`p-2.5 transition-all rounded-full border border-transparent active:scale-95 ${isUpgrading ? 'text-[#FF9500] animate-pulse bg-orange-50' : 'text-[#FF9500] hover:text-white hover:bg-[#FF9500] hover:shadow-[0_2px_10px_rgba(255,149,0,0.3)]'}`}
+                  title="一鍵 AI 升級 (加入份量縮放與標記)"
+                >
+                  {isUpgrading ? (
+                    <svg className="animate-spin" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" /></svg>
+                  )}
+                </button>
+              )}
               <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-2.5 text-slate-400 hover:text-[#007AFF] hover:bg-white border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all rounded-full active:scale-95" title="編輯">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
               </button>
