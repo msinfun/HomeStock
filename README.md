@@ -164,22 +164,40 @@
 
 ---
 
-## 5. 系統架構與設計規範
+## 5. 系統架構與設計規範 (System Architecture & Design Standards)
 
 * **Local-First 架構**：所有資料 (含圖片 Base64) 儲存於 `localStorage`，無後端伺服器。
-* **iOS 26 頂級視覺設計規範 (Premium Visual System)**：
-    本次升級全面確立了比擬現代 Apple Native App（如 Apple Health, Fitness）的「清透、立體、圓潤」三大視覺語彙，質感無與倫比。
+* **純淨白板與頂級毛玻璃 (Pure Whiteboard & Top-Tier Glassmorphism)**：
+    本次升級配合 UI/UX 稽核，全面確立了「清透、單層白框、純淨背景」的視覺黃金標準，回歸極致的現代扁平玻璃質感。
 
-    * **幾何導角與形狀 (Geometry & Shapes)**：
-        * **極致圓角 (Squircle)**：主容器與彈出視窗 (Modal) 統一採用極大的 `rounded-[32px]`；各種單行輸入框與操作按鈕 (`button`) 全面升級為絕對膠囊狀 `rounded-full`，創造出極度滑順的視覺引導。
-    
-    * **材質與光影 (Material & Lighting)**：
-        * **頂級毛玻璃 (Ultra Glassmorphism)**：瘋狂運用 `bg-white/90` 漸變至 `white/40` 的透視感，結合 `backdrop-blur-[40px]` 與高飽和度 `backdrop-saturate-150`。在此材質下，頁面滑動的色塊能水彩般地優雅透出。
-        * **無邊界的高光邊緣 (Highlight Borders)**：全域組件徹底揚棄灰色邊框，改以 `border border-white/60` 的光學細切邊與內陰影 `inset_0_2px_2px_rgba(255,255,255,1)` 創造玻璃厚度反光，輔以大片的高級立體陰影 (`shadow-[0_24px_48px_rgba(0,0,0,0.06)]`)，打造出猶如水晶般的懸浮卡片質感。
-        * **3D 觸覺按鈕 (Tactile Buttons)**：主要執行按鈕自帶色系光暈發散 (`shadow-[0_4px_12px_rgba(0,122,255,0.2)]`)，並於點擊時賦予 `active:scale-[0.96]` 模擬物理按壓阻尼感。
+    ### A. 容器與幾何 (Geometry & Containers)
+    * **外層大看板 (Containers)**：必定使用 `rounded-[32px]`。
+    * **內層實體卡片 (Inner Cards)**：必定使用 `rounded-[24px]`。
+    * **條目與輸入框 (Inputs & Badges)**：單行輸入框、按鈕與圓形圖示嚴格定義為絕對膠囊狀 `rounded-full`；多行輸入框 (Textareas) 可例外使用 `rounded-[24px]`。
+    * **特殊列表 (Exceptions)**：`ShoppingListView` 內的購物項目 (`ShoppingItemRow`) 維持傳統單行列表佈局 (List View)，保留 `border-b border-slate-100 last:border-none` 與 `py-4 px-5 min-h-[72px]` 以符合極簡待辦清單的特定 UX 需求，不強制套用獨立的 `rounded-[24px]` 卡片包裝。
 
-    * **字體層級 (Typography)**：
-        * 大幅提升數據與大標語的字重，大量堆疊 `font-black` (極粗體) 搭配 `tracking-widest` (超寬字距) 甚至是 `tracking-tighter` (緊湊字距)，締造具有強烈現代感儀表板的視覺爆發力。
+    ### B. 材質與深淺 (Material & Depths)
+    * **黃金標準頂層材質**：全域廢除 `bg-gradient-to-br` 以及過度深邃的陰影 (`shadow-[0_24px_48px_...]`)。大看板與單一資料卡片統一使用以下單一白邊毛玻璃材質，營造「平貼在背景上」的清透感：
+      ```css
+      bg-white/90 backdrop-blur-md border border-[rgba(255,255,255,0.6)] shadow-[0_2px_10px_rgba(0,0,0,0.03)]
+      ```
+    * **輔助底板**：透明底層元件若需懸浮感，可搭配使用 `bg-white/40` 等級，但不可加上外框框線，維持融合度。
+
+    ### C. 嚴格色彩系統 (Strict Color System)
+    由科技藍 (`#007AFF`) 與危險紅 (`#FF3B30`) 主導，**全域禁止使用橘色 (`#FF9500`)**。
+    * **主要操作/狀態** (如正常狀態、一般徽章)：使用 `text-[#007AFF] bg-blue-50`。
+    * **危險/急迫** (如過期 3 天內、報廢、刪除)：使用 `text-[#FF3B30] bg-red-50`。
+    * **次要/安全狀態** (如長備品、未過期)：改用高雅的 `text-slate-500 bg-slate-100` 或 `text-[#34C759] bg-green-50`。
+
+    ### D. 互動阻尼與微動畫 (Micro-Interactions)
+    * **大面積卡片點擊**：維持 `active:scale-[0.98]` 提供平穩回饋。
+    * **獨立按鈕與小圖示**：設定為 `active:scale-95` 提供俐落彈性。
+    * **左滑刪除 (Swipe-to-Delete)**：採用全透明底色與動態不透明度 (`{offsetX === 0 ? 'opacity-0' : 'opacity-100'}`) 的組合實作（內部配備紅X無背景按鈕），避免實色背景在圓角遮罩中溢出的渲染瑕疵。
+
+    ### E. 工程化字體排版 (Typography)
+    * **大標題 (Titles)**：套用 `font-black tracking-tighter` 以強調現代感。
+    * **正常內文 (Content)**：維持 `text-[15px]` 或 `text-[17px]` 搭配 `font-bold`。
+    * **輔助標籤 (Labels/Badges)**：全域統一使用 `text-[11px] font-black tracking-widest uppercase text-slate-400`。
 
 ---
 

@@ -361,7 +361,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       </div>
 
       {!isEditing && batchQueue.length === 0 && (
-        <div className="bg-gradient-to-br from-[#007AFF] to-[#0056b3] rounded-[32px] p-6 text-white shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative overflow-hidden">
+        <div className="bg-[#007AFF] rounded-[32px] p-6 text-white shadow-[0_4px_16px_rgba(0,122,255,0.15)] relative overflow-hidden">
           <div className="relative z-10">
             <h3 className="text-lg font-black tracking-tighter mb-2">AI 智慧辨識 (多圖)</h3>
             <p className="text-blue-100 text-[13px] mb-4 font-bold">
@@ -402,7 +402,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {batchQueue.length > 0 && (
-        <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_8px_16px_rgba(0,0,0,0.03),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
+        <div className="bg-white/90 backdrop-blur-md border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
           <div className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-2.5 rounded-[24px]">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>
           </div>
@@ -414,7 +414,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {/* 🍎 頂級玻璃大表單 */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-md p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">物品名稱 *</label>
           <div className="relative">
@@ -618,7 +618,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <button
               type="button"
               onClick={handleSkip}
-              className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+              className="w-full bg-white/90 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
             >
               跳過
             </button>
@@ -627,7 +627,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <button
             type="button"
             onClick={onCancel}
-            className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+            className="w-full bg-white/90 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
           >
             取消
           </button>

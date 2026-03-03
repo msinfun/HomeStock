@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Recipe, RecipeTagStructure } from '../types';
+import { Recipe, RecipeTagStructure, InventoryItem } from '../types';
 import { recognizeRecipeFromImage, recognizeRecipeFromText, inferRecipeTagsFromTitle } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -8,9 +8,10 @@ interface AddRecipeViewProps {
   onCancel: () => void;
   initialData?: Recipe;
   recipeTags: RecipeTagStructure;
+  inventoryItems?: InventoryItem[];
 }
 
-const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initialData, recipeTags }) => {
+const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initialData, recipeTags, inventoryItems }) => {
   const [loading, setLoading] = useState(false);
   const [loadingMode, setLoadingMode] = useState<'scan' | 'youtube' | null>(null);
   const [isTagLoading, setIsTagLoading] = useState(false);
@@ -102,7 +103,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         })
       );
 
-      const result = await recognizeRecipeFromImage(base64Images, availableFlatTags);
+      const result = await recognizeRecipeFromImage(base64Images, availableFlatTags, inventoryItems || []);
 
       if (result && result.name) {
         // Strict Filtering
@@ -143,7 +144,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
 
     try {
       // Pass available tags to AI
-      const result = await recognizeRecipeFromText(urlOrText, availableFlatTags);
+      const result = await recognizeRecipeFromText(urlOrText, availableFlatTags, inventoryItems || []);
       if (result) {
         // Strict Filtering
         const validTags = filterInvalidTags(result.tags);

@@ -96,10 +96,29 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
     const [y, m, d] = expiryDate.split('-').map(Number);
     const target = new Date(y, m - 1, d);
     const diffTime = target.getTime() - now.getTime();
+    const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (days <= 3) {
+      return "bg-red-50 text-[#FF3B30]";
+    } else if (days <= 7) {
+      return "bg-orange-50 text-orange-600"; // Reverted to orange for expiry
+    } else if (days <= 30) {
+      return "bg-green-50 text-[#34C759]";
+    } else if (days < 365) {
+      return "bg-slate-100 text-slate-500";
+    } else {
+      return "bg-slate-100 text-slate-500";
+    }
+  };
+
+  const getRestockBadgeColor = (targetDate: string) => {
+    const now = new Date();
+    const target = new Date(targetDate);
+    const diffTime = target.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays <= 3) return "bg-red-50 text-[#FF3B30]";
-    if (diffDays <= 7) return "bg-orange-50 text-[#FF9500]";
+    if (diffDays <= 7) return "bg-blue-50 text-[#007AFF]"; // Changed from amber to blue
     return "bg-green-50 text-[#34C759]";
   };
 

@@ -58,13 +58,19 @@ const getCommonPromptRules = (categories: string[]) => {
 `;
 };
 
-const RECIPE_STRICT_PROMPT = `
+const getRecipeStrictPrompt = (inventoryVocabulary: string = "") => `
   **[嚴格資料提取與標記規則 - 必讀]**
   1. **份量智能標記 (AI Tagging)**：在 \`ingredients\` (食材清單) 與 \`steps\` (作法步驟) 中，只要遇到「需要隨份量縮放的食材數字」，一律使用 \`{{數字|單位}}\` 的格式標記。例如：\`{{60|g}}\`, \`{{1.5|大匙}}\`, \`{{2|顆}}\`。若無單位請標記為 \`{{2}}\`。
   2. **絕對不標記**：溫度、時間、容器尺寸、攪拌次數等「不可縮放」的數字，絕對不要加上標記！例如保持「180度」、「28x28cm」、「烤15分鐘」。
   3. **食材一致性**：食材清單請輸出如「高筋麵粉 {{280|g}}」的格式。
-  4. **做法內嵌數量**：在 steps 提到食材時務必帶入份量並標記，如「加入 高筋麵粉 {{280|g}}」。
-  5. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（例如：2）。
+  4. **動態食材名稱標準化 (Crucial)**：請嚴格參考下方提供的『使用者現有庫存目錄』。將食譜中的口語化食材，盡可能精準映射到目錄中已存在的『小分類』或『物品名稱』。
+     - 範例：若食譜寫『糖』，請檢視目錄，若目錄有『二砂』、『黑糖』，請依語境轉換；若目錄只有『糖』，則維持『糖』。
+     - 若食譜的食材完全不存在於目錄中，請給予一個最通用、合理的標準名稱。
+     - 轉換後的名稱必須保留原有的 {{數值|單位}} 標記格式。
+
+     【使用者現有庫存目錄】：${inventoryVocabulary}
+  5. **做法內嵌數量**：在 steps 提到食材時務必帶入份量並標記，如「加入 高筋麵粉 {{280|g}}」。
+  6. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（例如：2）。
 `;
 
 const RECIPE_SCHEMA = {
@@ -259,10 +265,11 @@ export async function recognizeExpiryDate(base64Image: string): Promise<string |
   } catch (error) { handleApiError(error); return null; }
 }
 
-export async function recognizeRecipeFromImage(base64Images: string[], availableTags: string[] = []) {
+export async function recognizeRecipeFromImage(base64Images: string[], availableTags: string[] = [], inventoryItems: InventoryItem[] = []) {
   try {
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
+    const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
 
     // 將所有傳入的 Base64 圖片轉換為 Gemini 支援的格式
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
@@ -273,7 +280,7 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
         parts: [
           ...imageParts,
           {
-            text: `Extract recipe data from these images. If multiple images are provided, synthesize the ingredients and steps across all images into a single cohesive recipe. ${RECIPE_STRICT_PROMPT}
+            text: `Extract recipe data from these images. If multiple images are provided, synthesize the ingredients and steps across all images into a single cohesive recipe. ${getRecipeStrictPrompt(inventoryVocabulary)}
               **[STRICT TAGGING RULES]**
               1. You must select tags ONLY from this specific list: [${tagList}].
               2. Do NOT invent, translate, or create new tags.
@@ -294,16 +301,17 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
   } catch (error) { handleApiError(error); return null; }
 }
 
-export async function recognizeRecipeFromText(text: string, availableTags: string[] = []) {
+export async function recognizeRecipeFromText(text: string, availableTags: string[] = [], inventoryItems: InventoryItem[] = []) {
   try {
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
+    const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
         parts: [{
-          text: `Extract recipe data from: ${text}. ${RECIPE_STRICT_PROMPT}
+          text: `Extract recipe data from: ${text}. ${getRecipeStrictPrompt(inventoryVocabulary)}
             **[STRICT TAGGING RULES]**
             1. You must select tags ONLY from this specific list: [${tagList}].
             2. Do NOT invent, translate, or create new tags.
@@ -356,5 +364,98 @@ export async function inferRecipeTagsFromTitle(dishName: string, availableTags: 
     result.tags = cleanTags(result.tags, availableTags);
 
     return result;
+  } catch (error) { handleApiError(error); return null; }
+}
+
+// --- Smart Meal Planner APIs ---
+export async function recommendRecipes(inventory: InventoryItem[], recipes: Recipe[]) {
+  try {
+    const ai = getGeminiClient();
+    // 過濾出庫存大於 0，且有標示效期、開封日或安全庫存的物品提供給 AI 優先處理
+    const urgentInventory = inventory
+      .filter(i => i.quantity > 0 && (i.expiryDate || i.openedDate || i.minThreshold > 0))
+      .map(i => ({ name: i.name, subCategory: i.subCategory, expiryDate: i.expiryDate }));
+
+    const availableRecipes = recipes.map(r => ({ id: r.id, name: r.name, ingredients: r.ingredients }));
+
+    const prompt = `
+      你是一個貼心的家庭主廚。請根據使用者目前的「庫存(優先消耗快過期或已開封)」與「已儲存的食譜庫」，推薦 3 道最適合馬上煮的食譜。
+      
+      **[核心規則]**
+      1. 使用者「不紀錄生鮮食材 (肉類、蔬菜)」，請假設他們隨時可以去買生鮮。
+      2. 推薦依據必須是：這道食譜能幫忙消耗庫存中「即將過期的乾貨、醬料或常備品」。
+      3. 只能從提供的「已儲存的食譜庫」中挑選，絕對不能自己發明食譜！如果食譜庫太少或沒有適合的，請回傳空陣列。
+      
+      庫存：${JSON.stringify(urgentInventory)}
+      食譜庫：${JSON.stringify(availableRecipes)}
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              recipeId: { type: Type.STRING },
+              reason: { type: Type.STRING }
+            },
+            required: ["recipeId", "reason"]
+          }
+        }
+      }
+    });
+    return JSON.parse(response.text || "[]");
+  } catch (error) { handleApiError(error); return []; }
+}
+
+export async function generateMealPlan(recipes: Recipe[], userPrompt: string) {
+  try {
+    const ai = getGeminiClient();
+    const availableRecipes = recipes.map(r => ({ id: r.id, name: r.name, tags: r.tags }));
+
+    const prompt = `
+      你是一個專業的營養配餐員。請根據使用者的「特別要求」與「食譜庫」，安排一週 (週一至週日) 的早、午、晚餐。
+      
+      **[核心規則]**
+      1. 使用者要求：${userPrompt} (例如：以雞肉為主、晚餐三菜一湯等)。若無要求請自由均衡搭配。
+      2. 只能從提供的「食譜庫」中挑選，回傳食譜的 ID。
+      3. 若一餐需要多道菜，請在陣列中回傳多個 ID。若該餐不需安排(如不吃早餐)可回傳空陣列。
+      4. 如果食譜庫的數量太少，導致菜色重複度太高 (單一食譜在一週內重複超過 3 次)，請在 'warning' 欄位中給予友善的提示，建議使用者多存一些食譜。若無此問題，warning 回傳空字串。
+      
+      食譜庫：${JSON.stringify(availableRecipes)}
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            warning: { type: Type.STRING },
+            plan: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  day: { type: Type.STRING },
+                  breakfast: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  lunch: { type: Type.ARRAY, items: { type: Type.STRING } },
+                  dinner: { type: Type.ARRAY, items: { type: Type.STRING } }
+                },
+                required: ["day", "breakfast", "lunch", "dinner"]
+              }
+            }
+          },
+          required: ["warning", "plan"]
+        }
+      }
+    });
+    return JSON.parse(response.text || "null");
   } catch (error) { handleApiError(error); return null; }
 }

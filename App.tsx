@@ -8,6 +8,7 @@ import SettingsView from './components/SettingsView';
 import AnalysisView from './components/AnalysisView';
 import RecipeView from './components/RecipeView';
 import AddRecipeView from './components/AddRecipeView';
+import MealPlannerView from './components/MealPlannerView';
 import Navbar from './components/Navbar';
 import ConfirmationModal from './components/ConfirmationModal';
 
@@ -110,6 +111,12 @@ const App: React.FC = () => {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [isAddingQuickShopping, setIsAddingQuickShopping] = useState(false);
+  const [targetRecipeId, setTargetRecipeId] = useState<string | null>(null);
+
+  const handleJumpToRecipe = (id: string) => {
+    setTargetRecipeId(id);
+    setActiveView('recipes');
+  };
 
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -383,9 +390,14 @@ const App: React.FC = () => {
 
       <div className="relative z-10 w-full flex flex-col items-center">
         <header className="w-full max-w-2xl px-4 py-3 flex justify-between items-center bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 sticky top-0 z-40 border-b border-white shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]">
-          <button onClick={() => setActiveView('analysis')} className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'analysis' ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'}`}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setActiveView('analysis')} className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'analysis' ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
+            </button>
+            <button onClick={() => setActiveView('meal-planner')} className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'meal-planner' ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'}`} title="AI 廚房管家">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
+            </button>
+          </div>
           <div className="flex gap-2">
             <button onClick={() => window.location.reload()} className="text-slate-400 p-2.5 rounded-full transition-all active:scale-95 border border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>
@@ -399,9 +411,10 @@ const App: React.FC = () => {
         <main className="w-full max-w-2xl px-4 py-6">
           {activeView === 'dashboard' && <Dashboard items={items} shoppingList={shoppingList} onSwitchView={setActiveView} settings={settings} onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }} />}
           {activeView === 'inventory' && <InventoryList items={items} shoppingList={shoppingList} onUpdate={handleUpdateItem} onScrap={(i) => handleUpdateItem({ ...i, quantity: 0 }, 'scrap')} onDelete={handleDeleteInventoryItem} onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }} onDuplicate={(i) => { const { id, ...rest } = i; setEditingItem({ ...rest, id: '' } as InventoryItem); setActiveView('add'); }} categories={categories} locations={locations} /* 🍎 傳入 locations */ onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} settings={settings} />}
-          {activeView === 'recipes' && <RecipeView recipes={recipes} inventoryItems={items} shoppingList={shoppingList} recipeTags={recipeTags} onDelete={handleDeleteRecipe} onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} onDuplicate={(r) => { const { id, ...rest } = r; setEditingRecipe({ ...rest, id: '', name: r.name + ' (副本)' } as Recipe); setActiveView('edit-recipe'); }} onUpdate={handleUpdateRecipeDirectly} onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])} />}
-          {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
-          {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} />}
+          {activeView === 'recipes' && <RecipeView targetRecipeId={targetRecipeId} clearTargetRecipeId={() => setTargetRecipeId(null)} recipes={recipes} inventoryItems={items} shoppingList={shoppingList} recipeTags={recipeTags} onDelete={handleDeleteRecipe} onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} onDuplicate={(r) => { const { id, ...rest } = r; setEditingRecipe({ ...rest, id: '', name: r.name + ' (副本)' } as Recipe); setActiveView('edit-recipe'); }} onUpdate={handleUpdateRecipeDirectly} onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])} />}
+          {activeView === 'meal-planner' && <MealPlannerView recipes={recipes} inventoryItems={items} handleJumpToRecipe={handleJumpToRecipe} />}
+          {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
+          {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
           {activeView === 'shopping' && <ShoppingListView shoppingList={shoppingList} onRemove={handleDeleteShoppingItem} onToggle={(id) => setShoppingList(prev => prev.map(s => s.id === id ? { ...s, isChecked: !s.isChecked } : s))} showAddQuickItem={isAddingQuickShopping} onCloseAddQuickItem={() => setIsAddingQuickShopping(false)} onAddQuickItem={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} categories={categories} existingItems={items} />}
           {activeView === 'analysis' && <AnalysisView items={items} transactions={transactions} defs={defs} />}
           {activeView === 'settings' && (

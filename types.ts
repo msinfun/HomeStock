@@ -96,4 +96,4 @@ export interface SystemBackup {
   };
 }
 
-export type ViewState = 'dashboard' | 'inventory' | 'shopping' | 'recipes' | 'add-recipe' | 'edit-recipe' | 'add' | 'edit' | 'settings' | 'analysis';
+export type ViewState = 'dashboard' | 'inventory' | 'shopping' | 'recipes' | 'add-recipe' | 'edit-recipe' | 'add' | 'edit' | 'settings' | 'analysis' | 'meal-planner';

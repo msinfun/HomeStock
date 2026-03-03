@@ -75,7 +75,7 @@ const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onTog
 
       {/* 滑動刪除的紅色底層 */}
       <div
-        className={`absolute inset-0 bg-[#FF3B30] flex justify-end items-center px-6 z-0 transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
+        className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
         onClick={(e) => {
           e.stopPropagation();
           onRemove(item.id);
@@ -83,9 +83,9 @@ const ShoppingItemRow: React.FC<ShoppingItemRowProps> = ({ item, onRemove, onTog
           setSwipedOpen(false);
         }}
       >
-        <div className="flex flex-col items-center text-white">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          <span className="text-[10px] font-black mt-1 uppercase tracking-widest">刪除</span>
+        <div className="flex flex-col items-center">
+          <svg className="text-[#FF3B30]" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          <span className="text-slate-800 text-[10px] font-black mt-1 uppercase tracking-widest">刪除</span>
         </div>
       </div>
 

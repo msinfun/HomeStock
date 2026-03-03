@@ -9,6 +9,8 @@ interface RecipeViewProps {
   inventoryItems?: InventoryItem[];
   shoppingList?: ShoppingItem[];
   recipeTags: RecipeTagStructure;
+  targetRecipeId?: string | null;
+  clearTargetRecipeId?: () => void;
   onDelete: (id: string) => void;
   onEdit: (recipe: Recipe) => void;
   onUpdate: (recipe: Recipe) => void;
@@ -23,6 +25,7 @@ interface BatchEditState {
 const normalizeForMatch = (text: string) => {
   if (!text) return '';
   return text
+    .replace(/\{\{[^}]+\}\}/g, '')
     .replace(/[0-9.\/]+/g, '')
     .replace(/[a-zA-Z°%\.]/g, '')
     .replace(/[半一二兩三四五六七八九十]/g, '')
@@ -40,18 +43,25 @@ const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') 
   if (!text) return text;
 
   // 放寬正則表達式：允許數字、小數點、連字號(-)、波浪號(~)與空白
-  return text.replace(/\{\{([0-9.\-~ ]+)(?:\|([^}]+))?\}\}/g, (match, numStr, unitStr) => {
+  return text.replace(/\{\{([^|{}]+)(?:\|([^}]+))?\}\}/g, (match, numStr, unitStr) => {
     const unit = unitStr ? unitStr.trim() : '';
 
     // 獨立的單一數字縮放邏輯
     const scaleNumber = (str: string) => {
-      const num = parseFloat(str);
-      if (isNaN(num)) return str;
+      let num = parseFloat(str);
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 2 && !isNaN(parseFloat(parts[0])) && !isNaN(parseFloat(parts[1]))) {
+          num = parseFloat(parts[0]) / parseFloat(parts[1]);
+        }
+      }
+      if (isNaN(num)) return str; // 若為「適量」、「少許」直接回傳
       const scaled = num * factor;
       return scaled % 1 === 0 ? scaled.toString() : parseFloat(scaled.toFixed(2)).toString();
     };
 
     let scaledNumStr = numStr.trim();
+    let rawNumStr = numStr.trim();
 
     // 智慧拆解並縮放範圍數值
     if (numStr.includes('-')) {
@@ -63,8 +73,8 @@ const scaleString = (text: string, factor: number, format: 'replace' | 'arrow') 
     }
 
     // 如果倍率不是 1，且是食材清單模式，顯示箭頭變化 (例如：50-100g ➔ 100-200g)
-    if (format === 'arrow' && factor !== 1) {
-      return `${numStr.trim()}${unit} ➔ ${scaledNumStr}${unit}`;
+    if (format === 'arrow' && factor !== 1 && scaledNumStr !== rawNumStr) {
+      return `${rawNumStr}${unit} ➔ ${scaledNumStr}${unit}`;
     }
 
     return `${scaledNumStr}${unit}`;
@@ -137,7 +147,7 @@ const RecipeCard: React.FC<{
       `;
 
       // 呼叫現有的文字轉食譜 API 重新打上智能標記
-      const upgradedData = await recognizeRecipeFromText(recipeText, []);
+      const upgradedData = await recognizeRecipeFromText(recipeText, [], inventoryItems || []);
 
       if (upgradedData) {
         // 保留原本的 ID、標籤、來源、心得、庫存，僅替換需縮放的欄位
@@ -158,7 +168,7 @@ const RecipeCard: React.FC<{
 
   const handleShareRecipe = () => {
     // 移除 AI 標記的輔助函式 (將 {{225|g}} 轉為 225g，{{2}} 轉為 2)
-    const removeTags = (str: string) => str.replace(/\{\{([0-9.\-~ ]+)(?:\|([^}]+))?\}\}/g, '$1$2');
+    const removeTags = (str: string) => str.replace(/\{\{([^|{}]+)(?:\|([^}]+))?\}\}/g, '$1$2');
 
     // 更改文案為「來源」以適應非網址內容
     const sourceText = recipe.sourceLink ? `\n📖 來源：\n${recipe.sourceLink}\n` : '';
@@ -306,17 +316,17 @@ const RecipeCard: React.FC<{
     const coreTarget = normalizeForMatch(ingredientLine);
     if (!coreTarget) return { found: false, quantity: 0 };
 
-    let matchedItems = inventoryItems.filter(inv => {
+    const validInventory = inventoryItems.filter(inv => inv.quantity > 0);
+
+    let matchedItems = validInventory.filter(inv => {
       const invSub = normalizeForMatch(inv.subCategory || '');
-      // 移除反向 includes，確保「乳酪奶油」不會因為包含「奶油」而被誤判
-      return invSub === coreTarget || (invSub && invSub.includes(coreTarget));
+      return invSub === coreTarget;
     });
 
     if (matchedItems.length === 0) {
-      matchedItems = inventoryItems.filter(inv => {
+      matchedItems = validInventory.filter(inv => {
         const invName = normalizeForMatch(inv.name);
-        // 確保庫存名稱等於食譜需求，或庫存名稱包含食譜需求(如: 無鹽奶油 包含 奶油)
-        return invName === coreTarget || invName.includes(coreTarget);
+        return invName === coreTarget;
       });
     }
 
@@ -472,7 +482,7 @@ const RecipeCard: React.FC<{
     <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
       {!isBatchMode && (
         <div
-          className={`absolute inset-0 bg-[#FF3B30] flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
           onClick={(e) => {
             e.stopPropagation();
             onDeleteRequest();
@@ -480,9 +490,9 @@ const RecipeCard: React.FC<{
             setSwipedOpen(false);
           }}
         >
-          <div className="flex flex-col items-center text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-            <span className="text-[10px] font-black mt-1 uppercase tracking-widest">刪除</span>
+          <div className="flex flex-col items-center">
+            <svg className="text-[#FF3B30]" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+            <span className="text-slate-800 text-[10px] font-black mt-1 uppercase tracking-widest">刪除</span>
           </div>
         </div>
       )}
@@ -807,7 +817,7 @@ const RecipeCard: React.FC<{
 };
 
 const RecipeView: React.FC<RecipeViewProps> = ({
-  recipes, inventoryItems, shoppingList, recipeTags, onDelete, onEdit, onUpdate, onAddToShopping, onDuplicate
+  recipes, inventoryItems, shoppingList, recipeTags, targetRecipeId, clearTargetRecipeId, onDelete, onEdit, onUpdate, onAddToShopping, onDuplicate
 }) => {
   const getInitialState = () => {
     try {
@@ -839,6 +849,24 @@ const RecipeView: React.FC<RecipeViewProps> = ({
     try { return localStorage.getItem('homestock_recipe_view') === 'review' ? 'review' : 'default'; } catch { return 'default'; }
   });
   const [isBatchMode, setIsBatchMode] = useState(false);
+
+  useEffect(() => {
+    if (targetRecipeId) {
+      setTimeout(() => {
+        const el = document.getElementById('recipe-' + targetRecipeId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Optional visual highlight
+          el.classList.add('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_30px_rgba(0,122,255,0.3)]', 'rounded-[32px]', 'transition-all', 'duration-500');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_30px_rgba(0,122,255,0.3)]');
+            if (clearTargetRecipeId) clearTargetRecipeId();
+          }, 1500);
+        }
+      }, 100);
+    }
+  }, [targetRecipeId, clearTargetRecipeId]);
+
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchEditModal, setBatchEditModal] = useState<BatchEditState>({ type: null });
   const [isViewMenuOpen, setIsViewMenuOpen] = useState(false);
@@ -929,7 +957,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
       <div className="sticky top-0 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 z-30 border-b border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] -mx-4 px-4 h-16 flex items-center gap-3">
         <div className="relative flex-1 h-11 group">
           <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-          <input type="text" placeholder="搜尋食譜..." className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 transition-all placeholder:font-normal placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input type="text" placeholder="搜尋食譜..." className="w-full h-full pl-11 pr-4 bg-white/90 border border-white/60 rounded-full text-[17px] font-bold text-slate-800 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all placeholder:font-normal placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={search} onChange={(e) => setSearch(e.target.value)} />
 
           <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-full transition-all active:scale-95 ${isFilterOpen || selectedTags.size > 0 ? 'text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'text-slate-400 hover:bg-slate-100'}`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
@@ -1008,7 +1036,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
           </div>
         ) : (
           filteredRecipes.map(recipe => (
-            <div key={recipe.id} className="mb-4">
+            <div key={recipe.id} id={'recipe-' + recipe.id} className="mb-4">
               <RecipeCard recipe={recipe} inventoryItems={inventoryItems} shoppingList={shoppingList} isBatchMode={isBatchMode} isSelected={selectedIds.has(recipe.id)} viewMode={viewMode} onToggleSelection={toggleSelection} onEdit={() => onEdit(recipe)} onDuplicate={() => onDuplicate(recipe)} onShareSuccess={() => setConfirmConfig({ isOpen: true, title: '複製成功', message: '食譜文字已經複製，可以貼給朋友囉！', isAlert: true, onConfirm: () => setConfirmConfig(prev => ({ ...prev, isOpen: false })) })} onDeleteRequest={() => requestDelete(recipe.id)} onAddToShopping={onAddToShopping} onUpdate={onUpdate} isActiveSwipe={activeSwipeId === recipe.id} onSwipeStart={() => setActiveSwipeId(recipe.id)} />
             </div>
           ))
