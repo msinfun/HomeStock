@@ -27,7 +27,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     >
       <div
         /* 🍎 彈窗本體：頂級毛玻璃 + 32px 大圓角 */
-        className="bg-white/90 backdrop-blur-md rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] w-full max-w-sm overflow-hidden border border-white/60 animate-in zoom-in-95 duration-200"
+        className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] w-full max-w-sm overflow-hidden border border-white/60 animate-in zoom-in-95 duration-200"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-8 text-center space-y-3">

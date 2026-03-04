@@ -229,20 +229,20 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {/* --- PAGE: MAIN --- */}
       {activePage === 'main' && (
         <div className="space-y-6">
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             <ListRow label="Gemini AI 引擎" onClick={() => setActivePage('api')} value={apiKey ? "已連接" : "未設定"} />
             <ListRow label="過期提醒天數" onClick={() => setActivePage('expiry')} value={`${settings.expiryThresholdDays} 天`} />
           </div>
 
           <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">資料分類管理</div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             <ListRow label="大分類管理" onClick={() => setActivePage('categories')} value={categories.length.toString()} />
             <ListRow label="存放位置管理" onClick={() => setActivePage('locations')} value={locations.length.toString()} />
             <ListRow label="食譜標籤管理" onClick={() => setActivePage('tags')} value={Object.keys(recipeTags).length.toString()} />
           </div>
 
           <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">系統與備份</div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             <ListRow label="資料備份與還原" onClick={() => setActivePage('data')} />
           </div>
           <p className="text-center text-[11px] text-slate-400 font-black uppercase tracking-widest mt-8">HomeStock v3.8 (Native Edition)</p>
@@ -254,7 +254,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="space-y-4 animate-in slide-in-from-right-8">
           <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">AI 引擎設定</h3>
           <p className="text-sm font-bold text-slate-500 px-2 leading-relaxed">請輸入您的 Google Gemini API Key 以啟用智慧辨識。金鑰僅儲存在您的設備中。</p>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-6 space-y-4">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-6 space-y-4">
             <input type={showKey ? "text" : "password"} placeholder="在此貼上 API Key..." className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300" value={apiKey} onChange={e => setApiKey(e.target.value)} />
             <div className="grid grid-cols-2 gap-3">
               <button onClick={() => setShowKey(!showKey)} className="py-4 bg-slate-100/80 text-slate-600 rounded-full font-black tracking-widest active:scale-95 transition-all text-sm">{showKey ? '隱藏' : '顯示'}</button>
@@ -268,7 +268,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       {activePage === 'expiry' && (
         <div className="space-y-4 animate-in slide-in-from-right-8">
           <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">過期提醒設定</h3>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-6 flex items-center justify-between">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-6 flex items-center justify-between">
             <span className="text-[17px] text-slate-800 font-bold">提前幾天提醒？</span>
             <div className="relative w-28">
               <input type="number" className="w-full px-5 py-3 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-black text-[#007AFF] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={settings.expiryThresholdDays} onChange={(e) => onUpdateSettings({ ...settings, expiryThresholdDays: parseInt(e.target.value) || 0 })} />
@@ -286,7 +286,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <input type="text" placeholder="新增分類..." className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { addCategory(); } }} />
             <button onClick={addCategory} className="bg-[#007AFF] text-white px-6 rounded-full font-black tracking-widest active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)] text-sm shrink-0">新增</button>
           </div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {categories.map((cat, idx) => (
               <EditRow key={`cat-${idx}`} name={cat} onUp={() => moveCategory(idx, 'up')} onDown={() => moveCategory(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'category', oldName: cat })} onDelete={() => onUpdateCategories(categories.filter(c => c !== cat))} />
             ))}
@@ -303,7 +303,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <input type="text" placeholder="新增位置..." className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={newLoc} onChange={e => setNewLoc(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { addLocation(); } }} />
             <button onClick={addLocation} className="bg-[#007AFF] text-white px-6 rounded-full font-black tracking-widest active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.2)] text-sm shrink-0">新增</button>
           </div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {locations.map((loc, idx) => (
               <EditRow key={`loc-${idx}`} name={loc} onUp={() => moveLocation(idx, 'up')} onDown={() => moveLocation(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'location', oldName: loc })} onDelete={() => onUpdateLocations(locations.filter(l => l !== loc))} />
             ))}
@@ -322,7 +322,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
           <div className="space-y-5">
             {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
-              <div key={parent} className="bg-white/90 backdrop-blur-md rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 overflow-hidden">
+              <div key={parent} className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 overflow-hidden">
                 <div className="bg-transparent px-5 py-4 flex justify-between items-center border-b border-white/60">
                   <h4 className="font-black text-slate-800 text-[17px] tracking-tight">{parent}</h4>
                   <button onClick={() => {
@@ -351,7 +351,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           <h3 className="text-xl font-black text-slate-900 px-2 tracking-tighter">資料與備份</h3>
 
           <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">JSON 系統完整備份 (推薦)</div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             <button onClick={handleJsonExport} className="w-full flex items-center gap-3 px-5 py-4 border-b border-white/60 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-all active:scale-95 rounded-full">
               <svg className="w-5 h-5 text-[#007AFF]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
               匯出備份檔
@@ -364,7 +364,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
 
           <div className="px-4 text-[11px] font-black text-slate-400 uppercase tracking-widest mb-[-12px]">Excel 報表</div>
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             <button onClick={exportAllToExcel} className="w-full flex items-center gap-3 px-5 py-4 border-b border-white/60 hover:bg-white/40 active:bg-white/90 text-slate-800 font-bold text-[17px] transition-all active:scale-95 rounded-full">
               <svg className="w-5 h-5 text-[#007AFF]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M8 13h2" /><path d="M8 17h2" /><path d="M14 13h2" /><path d="M14 17h2" /></svg>
               匯出 Excel
@@ -376,7 +376,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
             <input type="file" accept=".xlsx, .xls" ref={excelInputRef} onChange={handleExcelUpload} className="hidden" />
           </div>
 
-          <div className="bg-white/90 backdrop-blur-md rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 mt-8">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 mt-8">
             <button onClick={() => {
               setConfirmConfig({ isOpen: true, title: '清除所有資料', message: '【警告】此動作將清除所有庫存、紀錄、食譜與設定資料，且無法復原！確定要重置所有資料嗎？', confirmText: '確認清除', onConfirm: () => { onClearAllData(); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
             }} className="w-full text-center px-5 py-4 text-[#FF3B30] font-black tracking-widest text-[17px] active:bg-red-50 transition-colors">

@@ -41,8 +41,16 @@ const getWeekDates = (baseDateStr: string) => {
 };
 
 const parseDayName = (dayStr: string): number => {
-    const map: Record<string, number> = { '星期一': 1, '星期二': 2, '星期三': 3, '星期四': 4, '星期五': 5, '星期六': 6, '星期日': 0 };
-    return map[dayStr] ?? 1;
+    if (dayStr.includes('一') || dayStr.includes('1')) return 1;
+    if (dayStr.includes('二') || dayStr.includes('2')) return 2;
+    if (dayStr.includes('三') || dayStr.includes('3')) return 3;
+    if (dayStr.includes('四') || dayStr.includes('4')) return 4;
+    if (dayStr.includes('五') || dayStr.includes('5')) return 5;
+    if (dayStr.includes('六') || dayStr.includes('6')) return 6;
+    if (dayStr.includes('日') || dayStr.includes('天') || dayStr.includes('0') || dayStr.includes('7')) return 0;
+
+    // 如果全部沒對上，才回退到 1
+    return 1;
 }
 
 const MealItemCard: React.FC<{
@@ -83,9 +91,9 @@ const MealItemCard: React.FC<{
     };
 
     return (
-        <div className="relative overflow-hidden w-full group rounded-[24px] bg-white transition-all hover:bg-slate-50">
+        <div className="relative overflow-hidden w-full group rounded-3xl bg-white transition-all hover:bg-slate-50">
             {/* Delete button background layer */}
-            <div className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 rounded-[24px] ${offsetX === 0 ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
+            <div className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 rounded-3xl ${offsetX === 0 ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}>
                 <button
                     onClick={(e) => { e.stopPropagation(); onDelete(); }}
                     className="transition-transform active:scale-95 flex flex-col items-center h-full px-2 justify-center gap-1"
@@ -97,7 +105,7 @@ const MealItemCard: React.FC<{
 
             {/* Main content layer */}
             <div
-                className="transition-transform duration-300 relative z-10 w-full bg-white rounded-[16px] px-5 py-3.5 cursor-pointer flex items-center touch-pan-y"
+                className="transition-transform duration-300 relative z-10 w-full bg-white rounded-2xl px-5 py-3.5 cursor-pointer flex items-center touch-pan-y"
                 style={{ transform: `translateX(${offsetX}px)` }}
                 onClick={onClick}
                 onTouchStart={handleTouchStart}
@@ -242,7 +250,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
         <div className="w-full flex flex-col -mt-6 pb-24 relative bg-transparent">
             <div className="relative z-10 w-full flex flex-col">
                 {/* Combined Header & Calendar Strip Card */}
-                <div className="shrink-0 mt-4 bg-white/90 backdrop-blur-md border border-white/60 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden">
+                <div className="shrink-0 mt-4 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden">
                     {/* Header */}
                     <header className="w-full px-5 py-4 flex justify-between items-center border-b border-slate-100/50">
                         <div className="flex flex-col">
@@ -326,7 +334,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             const theme = meal === 'breakfast' ? { color: '#FF9F0A', bg: 'bg-[#FF9F0A]/10', border: 'border-[#FF9F0A]/20' } : meal === 'lunch' ? { color: '#34C759', bg: 'bg-[#34C759]/10', border: 'border-[#34C759]/20' } : { color: '#5856D6', bg: 'bg-[#5856D6]/10', border: 'border-[#5856D6]/20' };
 
                             return (
-                                <div key={meal} className="w-full bg-white/90 backdrop-blur-md border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] overflow-hidden p-4 animate-in slide-in-from-bottom-[8px] duration-500 fade-in fill-mode-both" style={{ animationDelay: `${meal === 'breakfast' ? 0 : meal === 'lunch' ? 100 : 200}ms` }}>
+                                <div key={meal} className="w-full bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-3xl overflow-hidden p-4 animate-in slide-in-from-bottom-[8px] duration-500 fade-in fill-mode-both" style={{ animationDelay: `${meal === 'breakfast' ? 0 : meal === 'lunch' ? 100 : 200}ms` }}>
                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="text-[14px] font-black tracking-widest uppercase" style={{ color: theme.color }}>{mealName}</span>
@@ -350,7 +358,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                             </div>
                                         )}
 
-                                        <button onClick={() => { setManualAddDate(selectedDate); setManualAddMeal(meal); setIsManualAddOpen(true); }} className="mt-2 w-full flex items-center justify-center border border-dashed border-slate-300/50 text-slate-400 hover:text-[#007AFF] hover:border-[#007AFF]/30 hover:bg-blue-50/50 rounded-[24px] transition-all cursor-pointer group font-bold text-[13px] gap-1.5 active:scale-95 bg-transparent py-3.5 outline-none focus:outline-none focus:ring-0">
+                                        <button onClick={() => { setManualAddDate(selectedDate); setManualAddMeal(meal); setIsManualAddOpen(true); }} className="mt-2 w-full flex items-center justify-center border border-dashed border-slate-300/50 text-slate-400 hover:text-[#007AFF] hover:border-[#007AFF]/30 hover:bg-blue-50/50 rounded-3xl transition-all cursor-pointer group font-bold text-[13px] gap-1.5 active:scale-95 bg-transparent py-3.5 outline-none focus:outline-none focus:ring-0">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                             新增{mealName}餐點
                                         </button>
@@ -397,7 +405,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                 </div>
 
                                 {recommendations && (
-                                    <div className="mb-4 bg-blue-50/50 border border-blue-100 rounded-[24px] p-4 space-y-2 animate-in slide-in-from-top-2 duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
+                                    <div className="mb-4 bg-blue-50/50 border border-blue-100 rounded-3xl p-4 space-y-2 animate-in slide-in-from-top-2 duration-300 shadow-[0_2px_10px_rgba(0,0,0,0.02)]">
                                         <p className="text-[11px] font-black text-[#007AFF] text-center uppercase tracking-widest">AI 智慧推薦 (點擊套用)</p>
                                         <div className="space-y-2">
                                             {recommendations.length === 0 ? (
@@ -428,7 +436,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                         className="w-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 placeholder:font-bold outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all"
                                     />
                                     {isDropdownOpen && (
-                                        <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-white/60 rounded-[24px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-h-48 overflow-y-auto custom-scrollbar">
                                             {recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).length > 0 ? (
                                                 recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).map(r => (
                                                     <div key={r.id} onClick={() => { setManualAddRecipeId(r.id); setRecipeSearch(r.name); setIsDropdownOpen(false); }} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0">
@@ -469,12 +477,12 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
                         <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 pb-40">
                             <div>
-                                <p className="text-[13px] font-bold text-slate-500 mb-4 leading-relaxed bg-slate-50 p-4 rounded-[20px] border border-slate-100 text-center">
+                                <p className="text-[13px] font-bold text-slate-500 mb-4 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
                                     AI 將根據 <strong className="text-slate-800 tracking-widest">{selectedDate} 的餐食計畫</strong>，為您自動推薦適合的食譜餐點
                                 </p>
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">客製化需求 (選填)</label>
                                 <textarea
-                                    className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[15px] font-bold text-slate-800 placeholder:font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none resize-none h-32 transition-all"
+                                    className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[15px] font-bold text-slate-800 placeholder:font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none resize-none h-32 transition-all"
                                     placeholder="有什麼特殊要求嗎？\n(例如：早餐盡量不要澱粉、午餐想要便當、這週想吃清淡一點...)"
                                     value={mealPlanPrompt}
                                     onChange={e => setMealPlanPrompt(e.target.value)}

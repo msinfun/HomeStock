@@ -259,7 +259,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
               type="button"
               disabled={loading}
               onClick={() => fileInputRef.current?.click()}
-              className={`bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
+              className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
             >
               {loading && loadingMode === 'scan' ? (
@@ -269,7 +269,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 </>
               ) : (
                 <>
-                  <div className="p-3 bg-white rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
+                  <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
                   </div>
                   <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">拍照轉食譜</span>
@@ -282,7 +282,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
               type="button"
               disabled={loading}
               onClick={() => setShowUrlInput(true)}
-              className={`bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
+              className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
                 }`}
             >
               {loading && loadingMode === 'youtube' ? (
@@ -292,7 +292,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 </>
               ) : (
                 <>
-                  <div className="p-3 bg-white rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
+                  <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
                     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                       <polyline points="14 2 14 8 20 8" />
@@ -323,7 +323,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             <textarea
               autoFocus
               disabled={loading}
-              className="w-full px-5 py-4 rounded-[24px] bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-3xl bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={urlOrText}
               onChange={e => setUrlOrText(e.target.value)}
               placeholder="貼上文字內容"
@@ -357,7 +357,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
       )}
 
       {/* 🍎 整個大表單區塊：玻璃透視感 + 32px 大圓角 */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理名稱</label>
           <input
@@ -419,7 +419,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           </div>
 
           {/* 標籤選擇器大框：玻璃透視感 */}
-          <div className="border border-white/60 rounded-[28px] overflow-hidden bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+          <div className="border border-white/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
             {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
               <div key={parent} className="border-b border-white/60 last:border-none">
                 <button
@@ -481,7 +481,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理做法區</label>
           <textarea
             required
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             value={form.steps}
             onChange={e => setForm({ ...form, steps: e.target.value })}
             placeholder="AI 會自動分行，您也可以手動輸入。&#10;手動輸入配方份量無法縮放：&#10;1. 準備食材...&#10;2. 起油鍋..."
@@ -491,7 +491,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         <div className="space-y-1.5 border-t border-white/60 pt-5">
           <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">料理心得 / 評價</label>
           <textarea
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             value={form.review || ''}
             onChange={e => setForm({ ...form, review: e.target.value })}
             placeholder="記錄料理成功的小撇步、口味調整或家人評價..."

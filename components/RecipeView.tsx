@@ -441,7 +441,7 @@ const RecipeCard: React.FC<{
   // 🍎 Review 模式 (心得簡化卡片)：完全對齊一般模式的內外雙層結構
   if (viewMode === 'review') {
     return (
-      <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+      <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] bg-white/90 backdrop-blur-[40px] backdrop-saturate-150">
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -479,7 +479,7 @@ const RecipeCard: React.FC<{
 
   return (
     // 🍎 外層大卡片：頂級毛玻璃 + 光學邊緣
-    <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
+    <div className="relative overflow-hidden group rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] bg-white/90 backdrop-blur-[40px] backdrop-saturate-150">
       {!isBatchMode && (
         <div
           className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
@@ -582,7 +582,7 @@ const RecipeCard: React.FC<{
             </div>
 
             {/* 配方縮放控制區 */}
-            <div className="bg-white/90 rounded-[24px] p-4 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-white/90 rounded-3xl p-4 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-wrap items-center justify-between gap-3">
               <span className="text-[13px] font-black tracking-wider text-slate-600 whitespace-nowrap flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#007AFF]"><path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z" /><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" /><path d="M12 2v2" /><path d="M12 22v-2" /><path d="m17 17-1.4-1.4" /><path d="m4.9 4.9 1.4 1.4" /><path d="m19.1 4.9-1.4 1.4" /><path d="m4.9 19.1 1.4-1.4" /></svg>
                 配方份量
@@ -629,30 +629,30 @@ const RecipeCard: React.FC<{
                   </div>
 
                   {isEstimating && (
-                    <div className="bg-white/90 border border-white/60 rounded-[28px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] animate-pulse">
-                      <div className="flex gap-4 mb-4"><div className="flex-1 bg-slate-100 rounded-[20px] h-20"></div><div className="flex-1 bg-slate-100 rounded-[20px] h-20"></div></div>
+                    <div className="bg-white/90 border border-white/60 rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)] animate-pulse">
+                      <div className="flex gap-4 mb-4"><div className="flex-1 bg-slate-100 rounded-2xl h-20"></div><div className="flex-1 bg-slate-100 rounded-2xl h-20"></div></div>
                       <div className="h-6 bg-slate-100 rounded-full w-full"></div>
                     </div>
                   )}
 
                   {finalEstimation && !isEstimating && (
-                    <div className="bg-white/90 border border-white/60 rounded-[28px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                    <div className="bg-white/90 border border-white/60 rounded-2xl p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                       <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div className="bg-green-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                        <div className="bg-green-50 rounded-2xl p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                           <span className="text-[10px] font-black text-emerald-600 tracking-widest uppercase">總成本</span>
                           <div className="flex items-baseline gap-0.5 text-emerald-700 mt-1">
                             <span className="text-sm font-bold">$</span>
                             <span className="text-2xl font-black leading-none">{Math.round(finalEstimation.totalCost)}</span>
                           </div>
                         </div>
-                        <div className="bg-orange-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                        <div className="bg-orange-50 rounded-2xl p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                           <span className="text-[10px] font-black text-orange-600 tracking-widest uppercase">總熱量</span>
                           <div className="flex items-baseline gap-0.5 text-orange-700 mt-1">
                             <span className="text-2xl font-black leading-none">{finalEstimation.nutrition.calories}</span>
                             <span className="text-[10px] font-bold">卡</span>
                           </div>
                         </div>
-                        <div className="bg-indigo-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                        <div className="bg-indigo-50 rounded-2xl p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                           <span className="text-[10px] font-black text-indigo-600 tracking-widest uppercase">總重量</span>
                           <div className="flex items-baseline gap-0.5 text-indigo-700 mt-1">
                             <span className="text-2xl font-black leading-none">{finalEstimation.totalWeight}</span>
@@ -661,12 +661,12 @@ const RecipeCard: React.FC<{
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 mb-4">
-                        <div className="bg-blue-50/80 rounded-[16px] py-2 text-center"><span className="block text-[10px] text-blue-500 font-black tracking-widest">蛋白</span><span className="text-[15px] font-black text-blue-700">{finalEstimation.nutrition.protein}g</span></div>
-                        <div className="bg-purple-50/80 rounded-[16px] py-2 text-center"><span className="block text-[10px] text-purple-500 font-black tracking-widest">碳水</span><span className="text-[15px] font-black text-purple-700">{finalEstimation.nutrition.carbs}g</span></div>
-                        <div className="bg-amber-50/80 rounded-[16px] py-2 text-center"><span className="block text-[10px] text-amber-500 font-black tracking-widest">脂肪</span><span className="text-[15px] font-black text-amber-700">{finalEstimation.nutrition.fat}g</span></div>
+                        <div className="bg-blue-50/80 rounded-2xl py-2 text-center"><span className="block text-[10px] text-blue-500 font-black tracking-widest">蛋白</span><span className="text-[15px] font-black text-blue-700">{finalEstimation.nutrition.protein}g</span></div>
+                        <div className="bg-purple-50/80 rounded-2xl py-2 text-center"><span className="block text-[10px] text-purple-500 font-black tracking-widest">碳水</span><span className="text-[15px] font-black text-purple-700">{finalEstimation.nutrition.carbs}g</span></div>
+                        <div className="bg-amber-50/80 rounded-2xl py-2 text-center"><span className="block text-[10px] text-amber-500 font-black tracking-widest">脂肪</span><span className="text-[15px] font-black text-amber-700">{finalEstimation.nutrition.fat}g</span></div>
                       </div>
 
-                      <div className="border border-slate-100 rounded-[20px] bg-slate-50/50 overflow-hidden">
+                      <div className="border border-slate-100 rounded-2xl bg-slate-50/50 overflow-hidden">
                         <button
                           onClick={() => setCostBreakdownExpanded(!costBreakdownExpanded)}
                           className="w-full px-4 py-3 flex justify-between items-center text-[13px] font-black text-slate-600 hover:bg-slate-100 transition-colors"
@@ -677,7 +677,7 @@ const RecipeCard: React.FC<{
                         {costBreakdownExpanded && (
                           <div className="px-3 pb-3 pt-1 space-y-1.5 animate-in slide-in-from-top-2">
                             {finalEstimation.ingredients.map((ing, idx) => (
-                              <button key={idx} onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }} className="w-full flex justify-between items-center bg-white px-3 py-2.5 rounded-[16px] active:scale-[0.98] transition-all border border-transparent hover:border-[#007AFF]/30 group shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                              <button key={idx} onClick={(e) => { e.stopPropagation(); openPriceEdit(ing.name, ing.finalCost); }} className="w-full flex justify-between items-center bg-white px-3 py-2.5 rounded-2xl active:scale-[0.98] transition-all border border-transparent hover:border-[#007AFF]/30 group shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                                 <div className="text-left flex items-center gap-2">
                                   <div className={`w-2 h-2 rounded-full ${ing.source === 'inventory' ? 'bg-emerald-400' : 'bg-slate-300'}`}></div>
                                   <span className="text-[14px] text-slate-700 font-black">{ing.name} <span className="text-[10px] text-slate-400 font-bold ml-1">{ing.amount}</span></span>
@@ -691,7 +691,7 @@ const RecipeCard: React.FC<{
                     </div>
                   )}
 
-                  <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[28px] p-5">
+                  <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-5">
                     <h4 className="text-[13px] font-black tracking-wide text-slate-800 mb-4 px-1">食材清單</h4>
                     <div className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar pr-1">
                       {scaledIngredientList.map((ingItem, idx) => {
@@ -728,7 +728,7 @@ const RecipeCard: React.FC<{
 
               {/* --- 頁籤二：做法與沉浸模式 --- */}
               {activeTab === 'steps' && (
-                <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[28px] p-5 flex flex-col h-full">
+                <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-5 flex flex-col h-full">
 
                   {/* 🍎 沉浸模式按鈕：原廠藍光暈 */}
                   <button
@@ -749,7 +749,7 @@ const RecipeCard: React.FC<{
 
               {/* --- 頁籤三：心得 --- */}
               {activeTab === 'review' && (
-                <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[28px] p-6 min-h-[150px]">
+                <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-2xl p-6 min-h-[150px]">
                   <p className="text-[15px] font-bold text-slate-600 leading-relaxed whitespace-pre-wrap">
                     {recipe.review || <span className="text-slate-400 italic font-normal">尚無心得紀錄，點擊下方編輯按鈕來新增你的第一筆料理心得吧！</span>}
                   </p>
@@ -993,8 +993,8 @@ const RecipeView: React.FC<RecipeViewProps> = ({
                     const someSelected = children.some(c => selectedTags.has(c));
 
                     return (
-                      <div key={parent} className="rounded-[20px] overflow-hidden">
-                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${someSelected ? 'bg-blue-50/50' : ''}`}>
+                      <div key={parent} className="rounded-2xl overflow-hidden">
+                        <div className={`flex items-center p-3 rounded-2xl hover:bg-white transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] ${someSelected ? 'bg-blue-50/50' : ''}`}>
                           <div className="flex items-center justify-center w-6 h-6 mr-3 cursor-pointer active:scale-90 transition-transform" onClick={() => toggleParentGroup(parent)}>
                             <div className={`w-5 h-5 border-[1.5px] rounded-full flex items-center justify-center transition-colors ${allSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : (someSelected ? 'bg-[#007AFF] border-[#007AFF]' : 'border-slate-300 bg-white')}`}>
                               {allSelected && <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
@@ -1011,7 +1011,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
                             {children.map((child: string) => {
                               const isSubSelected = selectedTags.has(child);
                               return (
-                                <div key={child} className="flex items-center p-2 hover:bg-white rounded-[24px] cursor-pointer transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]" onClick={() => toggleTag(child)}>
+                                <div key={child} className="flex items-center p-2 hover:bg-white rounded-3xl cursor-pointer transition-all border border-transparent hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]" onClick={() => toggleTag(child)}>
                                   <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'border-slate-300 bg-white'}`}>
                                     {isSubSelected && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                                   </div>
@@ -1095,7 +1095,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
             <div className="p-6 space-y-8 overflow-y-auto">
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">顯示模式</p>
-                <div className="flex items-center justify-between bg-white px-5 py-4 rounded-[24px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                <div className="flex items-center justify-between bg-white px-5 py-4 rounded-3xl border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                   <div className="flex items-center gap-3 text-slate-800">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
                     <span className="text-[15px] font-black tracking-wide">開啟心得模式 (隱藏步驟)</span>

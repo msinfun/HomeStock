@@ -402,8 +402,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {batchQueue.length > 0 && (
-        <div className="bg-white/90 backdrop-blur-md border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
-          <div className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-2.5 rounded-[24px]">
+        <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[32px] p-5 text-[#007AFF] flex items-center gap-4 animate-in slide-in-from-top duration-300">
+          <div className="bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-2.5 rounded-3xl">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M16 13H8" /><path d="M16 17H8" /><path d="M10 9H8" /></svg>
           </div>
           <div>
@@ -414,7 +414,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       )}
 
       {/* 🍎 頂級玻璃大表單 */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-md p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+      <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">物品名稱 *</label>
           <div className="relative">
@@ -594,7 +594,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">其他備註</label>
           <textarea
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             rows={2}
             value={form.remarks}
             onChange={e => setForm({ ...form, remarks: e.target.value })}
@@ -605,7 +605,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         <div className="space-y-1.5">
           <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">評價 / 心得</label>
           <textarea
-            className="w-full px-5 py-4 rounded-[24px] bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
             rows={3}
             value={form.review}
             onChange={e => setForm({ ...form, review: e.target.value })}
@@ -618,7 +618,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             <button
               type="button"
               onClick={handleSkip}
-              className="w-full bg-white/90 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+              className="w-full bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
             >
               跳過
             </button>
@@ -627,7 +627,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <button
             type="button"
             onClick={onCancel}
-            className="w-full bg-white/90 backdrop-blur-md text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
+            className="w-full bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest"
           >
             取消
           </button>

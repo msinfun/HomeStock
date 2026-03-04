@@ -171,23 +171,36 @@
     本次升級配合 UI/UX 稽核，全面確立了「清透、單層白框、純淨背景」的視覺黃金標準，回歸極致的現代扁平玻璃質感。
 
     ### A. 容器與幾何 (Geometry & Containers)
-    * **外層大看板 (Containers)**：必定使用 `rounded-[32px]`。
-    * **內層實體卡片 (Inner Cards)**：必定使用 `rounded-[24px]`。
-    * **條目與輸入框 (Inputs & Badges)**：單行輸入框、按鈕與圓形圖示嚴格定義為絕對膠囊狀 `rounded-full`；多行輸入框 (Textareas) 可例外使用 `rounded-[24px]`。
-    * **特殊列表 (Exceptions)**：`ShoppingListView` 內的購物項目 (`ShoppingItemRow`) 維持傳統單行列表佈局 (List View)，保留 `border-b border-slate-100 last:border-none` 與 `py-4 px-5 min-h-[72px]` 以符合極簡待辦清單的特定 UX 需求，不強制套用獨立的 `rounded-[24px]` 卡片包裝。
+    * **外層大看板 (Outer Containers) 與彈窗 (Modals)**：嚴格使用 `rounded-[32px]`。
+    * **內層主卡片 (Inner Cards)**：嚴格使用 Tailwind 原生的 `rounded-3xl` (即 24px，全面取代手寫的 `[24px]`)。
+    * **內層子方塊 (Sub-blocks)**：如食譜營養三宮格、各類小分類卡片、多行輸入框 (Textareas)，嚴格使用 Tailwind 原生的 `rounded-2xl` (即 16px，全面取代 `[16px]`, `[20px]`)。
+    * **交互元件 (Interactive Elements)**：按鈕、單行輸入框、圓形圖示底色，必須為絕對膠囊狀 `rounded-full`。
+    * **特殊列表 (Exceptions)**：`ShoppingListView` 內的購物項目 (`ShoppingItemRow`) 維持傳統單行列表佈局 (List View)，保留 `border-b border-slate-100 last:border-none` 與 `py-4 px-5 min-h-[72px]` 以符合極簡待辦清單的特定 UX 需求，不強制套用獨立的 `rounded-3xl` 卡片包裝。
 
     ### B. 材質與深淺 (Material & Depths)
-    * **黃金標準頂層材質**：全域廢除 `bg-gradient-to-br` 以及過度深邃的陰影 (`shadow-[0_24px_48px_...]`)。大看板與單一資料卡片統一使用以下單一白邊毛玻璃材質，營造「平貼在背景上」的清透感：
+    * **黃金標準頂層材質**：全域廢除所有舊版的 `backdrop-blur-2xl`、`backdrop-blur-md` 與 `border-white/80`。大看板、主卡片與彈窗 (Modals) 統一嚴格使用以下單一白邊毛玻璃材質組合，解決 iOS 渲染層次問題並確保極致清透感：
       ```css
-      bg-white/90 backdrop-blur-md border border-[rgba(255,255,255,0.6)] shadow-[0_2px_10px_rgba(0,0,0,0.03)]
+      bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]
       ```
     * **輔助底板**：透明底層元件若需懸浮感，可搭配使用 `bg-white/40` 等級，但不可加上外框框線，維持融合度。
 
-    ### C. 嚴格色彩系統 (Strict Color System)
-    由科技藍 (`#007AFF`) 與危險紅 (`#FF3B30`) 主導，**全域禁止使用橘色 (`#FF9500`)**。
+    ### C. 嚴格色彩系統與禁止事項 (Strict Color System & Prohibited Styles)
+    由科技藍 (`#007AFF`) 與危險紅 (`#FF3B30`) 主導。
     * **主要操作/狀態** (如正常狀態、一般徽章)：使用 `text-[#007AFF] bg-blue-50`。
     * **危險/急迫** (如過期 3 天內、報廢、刪除)：使用 `text-[#FF3B30] bg-red-50`。
-    * **次要/安全狀態** (如長備品、未過期)：改用高雅的 `text-slate-500 bg-slate-100` 或 `text-[#34C759] bg-green-50`。
+    * **次要/安全狀態** (如長備品、未過期、剩餘 4-7 天效期)：統一使用高雅安全的 `text-slate-500 bg-slate-100` 或綠色系 `text-[#34C759] bg-green-50`。
+    
+    > [!WARNING]
+    > **🚫 明文禁止事項 (Prohibited Styles)**
+    > 1. **絕對禁止漸層**：嚴禁在資料卡片或任何看板背景使用 `bg-gradient-to-br from-white/95 to-white/40`。
+    > 2. **絕對禁止橘色**：嚴禁使用 `#FF9500` 或 `bg-orange-50 text-orange-600` 作為效期警告色，以免破壞整體冷色調的和諧。
+    > 3. **絕對禁止深度陰影**：嚴禁在**資料卡片**使用 `shadow-[0_24px_48px...]` 等厚重擴散陰影。
+    >
+    > **✅ 深度陰影合理例外 (Floating UI Exception)**
+    > 以下浮動層元件為了表達視覺高度與脫地感，**允許**保留 `shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]`：
+    > - **底部導覽列 (Navbar)**：需要強烈的脫地感與層次，與頁面底層拉開距離。
+    > - **彈窗 (Modals / Drawers)**：包含 `InventoryList`、`RecipeView`、`MealPlannerView`、`ShoppingListView`、`SettingsView`、`InputModal`、`ConfirmationModal` 等的 Modal/Drawer 元件，需要明顯浮於背景之上。
+    > - **浮動提示列 (Toast Bars)**：如批次操作 FAB 或篩選懸浮按鈕等。
 
     ### D. 互動阻尼與微動畫 (Micro-Interactions)
     * **大面積卡片點擊**：維持 `active:scale-[0.98]` 提供平穩回饋。

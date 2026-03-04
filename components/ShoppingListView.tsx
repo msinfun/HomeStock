@@ -12,13 +12,7 @@ interface ShoppingListViewProps {
   existingItems: InventoryItem[];
 }
 
-const CATEGORY_MAP: Record<string, string[]> = {
-  '食品': ['牛奶', '蛋', '肉', '菜', '米', '麵', '油', '鹽', '糖', '零食', '飲料', '水', '水果', '餅乾', '巧克力', '粉'],
-  '雜貨': ['紙巾', '洗衣粉', '清潔劑', '電池', '垃圾袋', '衛生紙'],
-  '藥品': ['維他命', '止痛藥', '感冒藥', '紗布', '酒精'],
-  '盥洗用品': ['洗髮', '沐浴', '牙膏', '牙刷', '洗面乳'],
-  '電子產品': ['充電線', '插頭', '耳機', '電池']
-};
+
 
 interface ShoppingItemRowProps {
   item: ShoppingItem;
@@ -131,30 +125,22 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   const completedCount = shoppingList.filter(item => item.isChecked).length;
 
   const [searchTerm, setSearchTerm] = useState('');
-  const tabs = ['歷史記錄', ...categories];
-  const [activeCategory, setActiveCategory] = useState<string>(tabs[0]);
 
   const filteredItems = useMemo(() => {
-    let itemsToSearch: string[] = [];
-    if (activeCategory === '歷史記錄') {
-      const historyNames = Array.from(new Set(existingItems.map(i => (i as any).name || i.name))) as string[];
-      itemsToSearch = historyNames;
-    } else {
-      itemsToSearch = CATEGORY_MAP[activeCategory] || [];
-    }
+    const historyNames = Array.from(new Set(existingItems.map(i => (i as any).name || i.name))) as string[];
 
     if (searchTerm.trim()) {
-      return itemsToSearch.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
+      return historyNames.filter(i => i.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-    return itemsToSearch;
-  }, [activeCategory, searchTerm, existingItems]);
+    return historyNames;
+  }, [searchTerm, existingItems]);
 
   return (
     <div className="-mt-4 space-y-6 pb-24 animate-in fade-in duration-300">
 
       {/* 頂部乾淨標題 */}
       <div className="flex items-center gap-3.5 px-2">
-        <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
+        <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="21" r="1" /><circle cx="19" cy="21" r="1" /><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" /></svg>
         </div>
         <div>
@@ -178,7 +164,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
             <p className="text-xs font-bold text-slate-400 mt-1">點擊下方按鈕快速加入待買物品</p>
           </div>
         ) : (
-          <div className="bg-white/90 border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] overflow-hidden flex flex-col">
+          <div className="bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[32px] overflow-hidden flex flex-col">
             {shoppingList.map(item => (
               <ShoppingItemRow
                 key={item.id}
@@ -195,9 +181,9 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 底部使用小撇步區塊 */}
       {shoppingList.length > 0 && (
-        <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]">
+        <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
           <div className="flex gap-3.5 items-start">
-            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
+            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
             </div>
             <div>
@@ -215,7 +201,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
       {/* 快速新增彈窗 (Slide-up Modal) */}
       {showAddQuickItem && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 flex flex-col h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
 
             {/* 標題與關閉按鈕 */}
             <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-white/80">
@@ -238,46 +224,35 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                   placeholder="搜尋物品..."
                   onKeyDown={e => {
                     if (e.key === 'Enter' && searchTerm.trim()) {
-                      onAddQuickItem(searchTerm.trim(), activeCategory === '歷史記錄' ? '其他' : activeCategory);
+                      onAddQuickItem(searchTerm.trim(), '其他');
                       setSearchTerm('');
                     }
                   }}
                 />
               </div>
 
-              {/* 分類標籤 */}
-              <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2 -mx-2 px-2">
-                {tabs.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={`px-4 py-2 rounded-full text-[13px] font-black tracking-widest whitespace-nowrap transition-all border-none ${activeCategory === cat ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)]' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+
 
               {/* 物品卡片網格 */}
               <div className="grid grid-cols-2 gap-3">
                 {filteredItems.map(name => (
                   <button
                     key={name}
-                    onClick={() => onAddQuickItem(name, activeCategory === '歷史記錄' ? '其他' : activeCategory)}
-                    className="p-4 bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-[20px] text-left hover:border-[#007AFF]/30 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
+                    onClick={() => onAddQuickItem(name, '其他')}
+                    className="p-4 bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-left hover:border-[#007AFF]/30 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-95 transition-all group overflow-hidden"
                   >
                     <span className="block text-[15px] font-black text-slate-700 group-hover:text-[#007AFF] truncate">{name}</span>
-                    <span className="text-[10px] font-bold text-slate-400 mt-1 block tracking-widest">{activeCategory === '歷史記錄' ? '從歷史記錄' : activeCategory}</span>
+                    <span className="text-[10px] font-bold text-slate-400 mt-1 block tracking-widest">從歷史庫存記錄</span>
                   </button>
                 ))}
 
                 {filteredItems.length === 0 && searchTerm.trim() && (
                   <button
                     onClick={() => {
-                      onAddQuickItem(searchTerm.trim(), activeCategory === '歷史記錄' ? '其他' : activeCategory);
+                      onAddQuickItem(searchTerm.trim(), '其他');
                       setSearchTerm('');
                     }}
-                    className="col-span-2 p-4 bg-blue-50/80 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[20px] text-center active:scale-95 transition-all hover:bg-blue-100"
+                    className="col-span-2 p-4 bg-blue-50/80 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-center active:scale-95 transition-all hover:bg-blue-100 overflow-hidden"
                   >
                     <span className="block text-[15px] font-black text-[#007AFF]">新增「{searchTerm}」</span>
                     <span className="text-[10px] font-bold text-blue-400 mt-1 block tracking-widest">點擊手動加入清單</span>

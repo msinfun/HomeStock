@@ -108,7 +108,7 @@ const InventoryItemCard: React.FC<{
 
     if (days < 0) { text = `已過期 ${Math.abs(days)} 天`; badgeClass = "bg-red-50 text-[#FF3B30]"; }
     else if (days <= 3) { text = `剩 ${days} 天`; badgeClass = "bg-red-50 text-[#FF3B30]"; }
-    else if (days <= 7) { text = `剩 ${days} 天`; badgeClass = "bg-orange-50 text-[#FF9500]"; }
+    else if (days <= 7) { text = `剩 ${days} 天`; badgeClass = "bg-slate-100 text-slate-500"; }
     else if (days <= thresholdDays) { text = `剩 ${days} 天`; badgeClass = "bg-amber-50 text-amber-600"; }
     else if (days < 30) { text = `剩 ${Math.floor(days / 7)} 週`; badgeClass = "bg-green-50 text-[#34C759]"; }
     else if (days < 365) { text = `剩 ${Math.floor(days / 30)} 個月`; badgeClass = "bg-slate-100 text-slate-500"; }
@@ -128,7 +128,7 @@ const InventoryItemCard: React.FC<{
       <div
         id={`inventory-${item.id}`}
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-        className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 transition-all duration-500 relative z-10 cursor-pointer hover:bg-white/80 p-5 h-full"
+        className="mb-4 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden bg-white/90 backdrop-blur-[40px] transition-all duration-500 relative z-10 cursor-pointer hover:bg-white/80 p-5 h-full"
       >
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-[17px] font-black tracking-tight text-slate-800">{item.name}</h3>
@@ -148,7 +148,7 @@ const InventoryItemCard: React.FC<{
   return (
     <div
       id={`inventory-${item.id}`}
-      className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 relative group transition-all duration-500"
+      className="mb-4 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] overflow-hidden bg-white/90 backdrop-blur-[40px] relative group transition-all duration-500"
     >
       {!isBatchMode && (
         <div
@@ -695,8 +695,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     const isSelected = filters.categories.has(cat);
 
                     return (
-                      <div key={cat} className="rounded-[20px] overflow-hidden">
-                        <div className={`flex items-center p-3 rounded-[20px] hover:bg-white/80 transition-all cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}>
+                      <div key={cat} className="rounded-2xl overflow-hidden">
+                        <div className={`flex items-center p-3 rounded-2xl hover:bg-white/80 transition-all cursor-pointer ${isSelected ? 'bg-blue-50/50' : ''}`}>
                           <div
                             className="flex items-center justify-center w-6 h-6 mr-3 active:scale-90 transition-transform"
                             onClick={(e) => { e.stopPropagation(); toggleFilterCategory(cat); }}
@@ -727,7 +727,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                             {subCats.map((sub: string) => {
                               const isSubSelected = filters.subCategories.has(sub);
                               return (
-                                <div key={sub} className="flex items-center p-2 hover:bg-white/80 rounded-[24px] cursor-pointer transition-all" onClick={() => toggleFilterSubCategory(sub)}>
+                                <div key={sub} className="flex items-center p-2 hover:bg-white/80 rounded-3xl cursor-pointer transition-all" onClick={() => toggleFilterSubCategory(sub)}>
                                   <div className={`w-4 h-4 border-[1.5px] rounded-full flex items-center justify-center mr-3 transition-colors ${isSubSelected ? 'bg-[#007AFF] border-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'border-slate-300 bg-white'}`}>
                                     {isSubSelected && <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
                                   </div>
@@ -780,7 +780,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       </div>
 
       {pinnedCategoryReviews && (
-        <div className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] animate-in slide-in-from-top duration-300 relative overflow-hidden mt-4 mb-6">
+        <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] animate-in slide-in-from-top duration-300 relative overflow-hidden mt-4 mb-6">
           <div className="absolute right-0 top-0 opacity-5 p-2 pointer-events-none">
             <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-4.5a1 1 0 0 1-2 0V7a1 1 0 0 1 2 0z" /></svg>
           </div>
@@ -791,7 +791,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
             </h3>
             <div className="space-y-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar">
               {pinnedCategoryReviews.reviews.map((item, idx) => (
-                <div key={idx} className="bg-white/90 p-4 rounded-[24px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+                <div key={idx} className="bg-white/90 p-4 rounded-3xl border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
                   <span className="block font-black tracking-tight text-[#007AFF] text-[15px] mb-1.5">{item.name}</span>
                   <p className="text-slate-600 font-bold text-sm leading-relaxed">{item.review}</p>
                 </div>
@@ -923,7 +923,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     <button
                       key={opt.id}
                       onClick={() => setSortOrder(opt.id as any)}
-                      className={`flex items-center justify-between px-5 py-4 rounded-[24px] border-none transition-all active:scale-[0.98] ${sortOrder === opt.id ? 'bg-blue-50/80 text-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-600 hover:bg-slate-50'}`}
+                      className={`flex items-center justify-between px-5 py-4 rounded-3xl border-none transition-all active:scale-[0.98] ${sortOrder === opt.id ? 'bg-blue-50/80 text-[#007AFF] shadow-[0_2px_10px_rgba(0,0,0,0.03)]' : 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.03)] text-slate-600 hover:bg-slate-50'}`}
                     >
                       <div className="flex items-center gap-3">
                         {opt.icon}
@@ -938,7 +938,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">顯示設定</p>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between bg-white px-5 py-4 rounded-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                  <div className="flex items-center justify-between bg-white px-5 py-4 rounded-3xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center gap-3 text-slate-800">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><path d="M3 9h18" /><path d="M9 21V9" /></svg>
                       <span className="text-[15px] font-black tracking-wide">開啟心得模式</span>
@@ -951,7 +951,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
                     </button>
                   </div>
 
-                  <div className="flex items-center justify-between bg-white px-5 py-4 rounded-[24px] shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
+                  <div className="flex items-center justify-between bg-white px-5 py-4 rounded-3xl shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
                     <div className="flex items-center gap-3 text-slate-800">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="m15 9-6 6" /><path d="m9 9 6 6" /></svg>
                       <span className="text-[15px] font-black tracking-wide">隱藏零庫存</span>
@@ -1047,7 +1047,11 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
               <button
                 onClick={() => {
                   const currentStr = consumeModal.targetQty.toString();
-                  const finalQty = currentStr === '' ? 0 : parseInt(currentStr, 10);
+                  if (currentStr.trim() === '') return; // 任務 1：防呆，清空輸入框時直接 return 阻斷執行
+
+                  const finalQty = parseInt(currentStr, 10);
+                  if (isNaN(finalQty) || finalQty < 0) return; // 任務 1：防呆，NaN 或負數時直接 return
+
                   const consumedAmount = consumeModal.item!.quantity - finalQty;
                   if (consumedAmount > 0) {
                     handleAdjustQuantity(consumeModal.item!, -consumedAmount);

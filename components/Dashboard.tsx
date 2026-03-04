@@ -33,7 +33,8 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
   const expiringItems = items.filter(item => {
     if (!item.expiryDate) return false;
     const expiry = new Date(item.expiryDate);
-    return expiry <= thresholdDate;
+    const diffDays = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return expiry <= thresholdDate && diffDays >= -30;
   }).sort((a, b) => {
     return (a.expiryDate!).localeCompare(b.expiryDate!);
   });
@@ -102,7 +103,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
     if (days <= 3) {
       return "bg-red-50 text-[#FF3B30]";
     } else if (days <= 7) {
-      return "bg-orange-50 text-orange-600"; // Reverted to orange for expiry
+      return "bg-slate-100 text-slate-500";
     } else if (days <= 30) {
       return "bg-green-50 text-[#34C759]";
     } else if (days < 365) {
@@ -135,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       {/* 1. 頂部統計卡片 (Overview Cards) - 保持完美的外部光學 */}
       <section className="grid grid-cols-2 gap-4">
         <div
-          className="bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden"
+          className="bg-white/90 backdrop-blur-[40px] p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('inventory')}
         >
           <span className="text-[40px] font-black tracking-tighter text-slate-800 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)] leading-none">{items.length}</span>
@@ -143,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
         </div>
 
         <div
-          className="bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] flex flex-col items-center justify-center text-center cursor-pointer hover:from-white hover:to-white/60 active:scale-[0.96] transition-all group relative overflow-hidden"
+          className="bg-white/90 backdrop-blur-[40px] p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('shopping')}
         >
           <span className={`text-[40px] font-black tracking-tighter transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)] leading-none ${outOfStockCount > 0 ? 'text-[#FF3B30]' : 'text-slate-800 group-hover:text-[#007AFF]'}`}>
@@ -154,13 +155,13 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       </section>
 
       {/* 2. 即將過期 (Expiry Alerts) */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative">
+      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative">
         <div
           className="flex justify-between items-center mb-5 cursor-pointer group"
           onClick={() => setIsExpiryExpanded(!isExpiryExpanded)}
         >
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#FF3B30]"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
             </div>
             <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">即將過期</h2>
@@ -175,7 +176,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
         </div>
 
         {expiringItems.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-[24px] border border-dashed border-white">
+          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-3xl border border-dashed border-white">
             目前沒有即將過期的物品
           </div>
         ) : (
@@ -185,7 +186,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
                 key={item.id}
                 onClick={() => onNavigateToInventoryItem ? onNavigateToInventoryItem(item.id) : onEdit(item)}
                 // 🍎 內部小卡片：去除高光，回歸乾淨的半透白板與柔和陰影
-                className="flex justify-between items-center gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-[24px]"
+                className="flex justify-between items-center gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-3xl"
               >
                 <span className="text-[16px] font-black tracking-tight text-slate-800 flex-1 truncate leading-tight">{item.name}</span>
                 <span className={`text-[11px] font-black tracking-widest px-3.5 py-1.5 rounded-full whitespace-nowrap shrink-0 ${item.expiryDate ? getExpiryBadgeClass(item.expiryDate) : 'bg-slate-100 text-slate-400'}`}>
@@ -215,13 +216,13 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       </section>
 
       {/* 3. 建議補貨 (Replenishment Suggestions) */}
-      <section className="bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] relative">
+      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative">
         <div
           className="flex justify-between items-center mb-5 cursor-pointer group"
           onClick={() => setIsRestockExpanded(!isRestockExpanded)}
         >
           <div className="flex items-center gap-3.5">
-            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[20px] shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
+            <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-[#007AFF]"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" /><path d="M3 6h18" /><path d="M16 10a4 4 0 0 1-8 0" /></svg>
             </div>
             <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">建議補貨</h2>
@@ -236,7 +237,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
         </div>
 
         {replenishmentItems.length === 0 ? (
-          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-[24px] border border-dashed border-white">
+          <div className="text-center py-8 text-sm text-slate-400 font-bold bg-white/40 rounded-3xl border border-dashed border-white">
             庫存充足，無需補貨
           </div>
         ) : (
@@ -246,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
               const itemNames = Array.from(new Set(group.items.map(i => i.name))).join('、');
 
               return (
-                <div key={group.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] hover:bg-white transition-all animate-in fade-in duration-300">
+                <div key={group.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-3xl hover:bg-white transition-all animate-in fade-in duration-300">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span className="text-[16px] font-black tracking-tight text-slate-800 block leading-tight">{group.name}</span>
