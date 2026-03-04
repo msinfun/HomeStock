@@ -432,6 +432,16 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     onConfirm: () => { },
   });
 
+  const [consumeModal, setConsumeModal] = useState<{
+    isOpen: boolean;
+    item: InventoryItem | null;
+    targetQty: number | string;
+  }>({
+    isOpen: false,
+    item: null,
+    targetQty: 0,
+  });
+
   useEffect(() => {
     if (props.targetInventoryId) {
       setExpandedItemIds(prev => new Set(prev).add(props.targetInventoryId!));
@@ -491,6 +501,10 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
   }, [props.items, props.categories]);
 
   const filteredItems = props.items.filter(item => {
+    if (hideOutOfStock && item.quantity === 0) {
+      return false;
+    }
+
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase()) ||
       item.location.toLowerCase().includes(search.toLowerCase());
 
@@ -503,9 +517,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       matchesFilter = catMatch || subMatch;
     }
 
-    const matchesStockStatus = (search.trim() !== '' || !hideOutOfStock || item.quantity > 0);
-
-    return matchesSearch && matchesStockStatus && matchesFilter;
+    return matchesSearch && matchesFilter;
   });
 
   const sortedItems = [...filteredItems].sort((a, b) => {
@@ -614,14 +626,10 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
   };
 
   const requestConsume = (item: InventoryItem) => {
-    setConfirmConfig({
+    setConsumeModal({
       isOpen: true,
-      title: '確認消耗',
-      message: `確定要消耗 1 個「${item.name}」嗎？`,
-      onConfirm: () => {
-        handleAdjustQuantity(item, -1);
-        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
-      }
+      item,
+      targetQty: item.quantity
     });
   };
 
@@ -977,6 +985,83 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
         onConfirm={confirmConfig.onConfirm}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {consumeModal.isOpen && consumeModal.item && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setConsumeModal({ ...consumeModal, isOpen: false })}>
+          <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200 flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2">確認消耗</h3>
+            <p className="text-sm font-bold text-slate-500 mb-2 text-center">請設定「{consumeModal.item.name}」消耗後的剩餘數量</p>
+
+            <div className="flex items-center justify-center gap-4 my-6">
+              <button
+                onClick={() => {
+                  const currentStr = consumeModal.targetQty.toString();
+                  const current = currentStr === '' ? 0 : parseInt(currentStr, 10);
+                  setConsumeModal(prev => ({ ...prev, targetQty: Math.max(0, current - 1) }));
+                }}
+                className="w-12 h-12 rounded-full bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center text-xl font-bold active:scale-95 transition-all outline-none shrink-0"
+              >
+                -
+              </button>
+
+              <input
+                type="number"
+                value={consumeModal.targetQty}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === '') {
+                    setConsumeModal(prev => ({ ...prev, targetQty: '' }));
+                    return;
+                  }
+                  const num = parseInt(val, 10);
+                  if (!isNaN(num)) {
+                    if (num > consumeModal.item!.quantity) {
+                      setConsumeModal(prev => ({ ...prev, targetQty: consumeModal.item!.quantity }));
+                    } else {
+                      setConsumeModal(prev => ({ ...prev, targetQty: num }));
+                    }
+                  }
+                }}
+                onBlur={() => {
+                  if (consumeModal.targetQty === '') {
+                    setConsumeModal(prev => ({ ...prev, targetQty: 0 }));
+                  }
+                }}
+                className="text-4xl font-black w-24 text-center tracking-tighter text-slate-800 bg-transparent border-none outline-none focus:ring-0 p-0 m-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+
+              <button
+                onClick={() => {
+                  const currentStr = consumeModal.targetQty.toString();
+                  const current = currentStr === '' ? 0 : parseInt(currentStr, 10);
+                  setConsumeModal(prev => ({ ...prev, targetQty: Math.min(prev.item!.quantity, current + 1) }));
+                }}
+                className="w-12 h-12 rounded-full bg-white text-slate-500 shadow-[0_2px_8px_rgba(0,0,0,0.02)] flex items-center justify-center text-xl font-bold active:scale-95 transition-all outline-none shrink-0"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 w-full mt-2">
+              <button onClick={() => setConsumeModal({ ...consumeModal, isOpen: false })} className="py-3.5 rounded-full font-black text-slate-500 bg-white hover:bg-slate-50 active:scale-[0.96] transition-all text-sm outline-none shadow-[0_2px_8px_rgba(0,0,0,0.02)]">取消</button>
+              <button
+                onClick={() => {
+                  const currentStr = consumeModal.targetQty.toString();
+                  const finalQty = currentStr === '' ? 0 : parseInt(currentStr, 10);
+                  const consumedAmount = consumeModal.item!.quantity - finalQty;
+                  if (consumedAmount > 0) {
+                    handleAdjustQuantity(consumeModal.item!, -consumedAmount);
+                  }
+                  setConsumeModal({ ...consumeModal, isOpen: false });
+                }}
+                className="py-3.5 rounded-full font-black text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-sm outline-none"
+              >
+                確定
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

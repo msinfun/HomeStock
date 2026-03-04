@@ -637,14 +637,27 @@ const RecipeCard: React.FC<{
 
                   {finalEstimation && !isEstimating && (
                     <div className="bg-white/90 border border-white/60 rounded-[28px] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-                      <div className="flex gap-3 mb-4">
-                        <div className="flex-1 bg-green-50 rounded-[20px] p-4 flex flex-col justify-between">
+                      <div className="grid grid-cols-3 gap-2 mb-4">
+                        <div className="bg-green-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                           <span className="text-[10px] font-black text-emerald-600 tracking-widest uppercase">總成本</span>
-                          <div className="flex items-baseline gap-0.5 text-emerald-700 mt-1"><span className="text-sm font-bold">$</span><span className="text-3xl font-black leading-none">{Math.round(finalEstimation.totalCost)}</span></div>
+                          <div className="flex items-baseline gap-0.5 text-emerald-700 mt-1">
+                            <span className="text-sm font-bold">$</span>
+                            <span className="text-2xl font-black leading-none">{Math.round(finalEstimation.totalCost)}</span>
+                          </div>
                         </div>
-                        <div className="flex-1 bg-orange-50 rounded-[20px] p-4 flex flex-col justify-between">
+                        <div className="bg-orange-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
                           <span className="text-[10px] font-black text-orange-600 tracking-widest uppercase">總熱量</span>
-                          <div className="flex items-baseline gap-1 text-orange-700 mt-1"><span className="text-3xl font-black leading-none">{finalEstimation.nutrition.calories}</span><span className="text-[10px] font-bold">kcal</span></div>
+                          <div className="flex items-baseline gap-0.5 text-orange-700 mt-1">
+                            <span className="text-2xl font-black leading-none">{finalEstimation.nutrition.calories}</span>
+                            <span className="text-[10px] font-bold">卡</span>
+                          </div>
+                        </div>
+                        <div className="bg-indigo-50 rounded-[20px] p-3 flex flex-col justify-between shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                          <span className="text-[10px] font-black text-indigo-600 tracking-widest uppercase">總重量</span>
+                          <div className="flex items-baseline gap-0.5 text-indigo-700 mt-1">
+                            <span className="text-2xl font-black leading-none">{finalEstimation.totalWeight}</span>
+                            <span className="text-[10px] font-bold">g</span>
+                          </div>
                         </div>
                       </div>
                       <div className="grid grid-cols-3 gap-2 mb-4">

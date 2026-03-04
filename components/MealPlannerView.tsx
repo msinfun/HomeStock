@@ -26,6 +26,7 @@ const getWeekDates = (baseDateStr: string) => {
 
     const week: { dateStr: string, dayName: string, shortName: string }[] = [];
     const dayNames = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const weekDayNames = ['日', '一', '二', '三', '四', '五', '六'];
 
     for (let i = 0; i < 7; i++) {
         const d = new Date(monday);
@@ -33,7 +34,7 @@ const getWeekDates = (baseDateStr: string) => {
         week.push({
             dateStr: getLocalDateString(d),
             dayName: dayNames[d.getDay()],
-            shortName: dayNames[d.getDay()][1]
+            shortName: weekDayNames[d.getDay()]
         });
     }
     return week;
