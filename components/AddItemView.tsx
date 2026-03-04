@@ -297,8 +297,17 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             onCancel: () => { }
           });
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Image AI failed", err);
+        setModalConfig({
+          isOpen: true,
+          title: '辨識失敗',
+          message: err instanceof Error ? err.message : 'AI 圖片分析失敗，請稍後再試。',
+          isAlert: true,
+          confirmText: '好',
+          onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
+          onCancel: () => { }
+        });
       } finally {
         setIsAiLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -331,8 +340,17 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               onCancel: () => { }
             });
           }
-        } catch (err) {
+        } catch (err: any) {
           console.error("Expiry AI failed", err);
+          setModalConfig({
+            isOpen: true,
+            title: '辨識失敗',
+            message: err instanceof Error ? err.message : 'AI 效期分析失敗，請稍後再試。',
+            isAlert: true,
+            confirmText: '好',
+            onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
+            onCancel: () => { }
+          });
         } finally {
           setIsExpiryAiLoading(false);
           if (expiryFileInputRef.current) expiryFileInputRef.current.value = '';

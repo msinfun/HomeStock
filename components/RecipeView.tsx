@@ -158,8 +158,9 @@ const RecipeCard: React.FC<{
           servings: upgradedData.servings || recipe.servings
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("升級失敗:", error);
+      alert(error instanceof Error ? error.message : '智能升級失敗，請稍後再試。');
     } finally {
       setIsUpgrading(false);
     }
@@ -255,9 +256,9 @@ const RecipeCard: React.FC<{
       const result = await estimateRecipeCostAndNutrition(recipe, inventoryItems || []);
       setEstimationResult(result);
       onUpdate({ ...recipe, cachedEstimation: result } as Recipe);
-    } catch (error) {
+    } catch (error: any) {
       console.error("估算失敗:", error);
-      alert('AI 伺服器忙碌中: 目前估算服務負載較高 (503 錯誤)，請稍等幾分鐘後再試一次！');
+      alert(error instanceof Error ? error.message : 'AI 伺服器忙碌中，請稍等幾分鐘後再試一次！');
     } finally {
       setIsEstimating(false);
     }

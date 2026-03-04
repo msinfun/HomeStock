@@ -12,25 +12,25 @@ function getGeminiClient(): GoogleGenAI {
 }
 
 // --- Error Handler ---
-function handleApiError(error: any) {
+function handleApiError(error: any): Error {
   console.error("Gemini API Error:", error);
-  const errString = error.toString().toLowerCase();
+  const errString = (error?.message || error?.toString() || '').toLowerCase();
+  const status = error?.status;
 
-  let title = "AI 請求失敗";
-  let message = "發生未預期的錯誤，請稍後再試。";
-
-  if (errString.includes('403') || errString.includes('key') || errString.includes('permission') || errString.includes('unauthenticated') || errString.includes('missing api key')) {
-    title = "API Key 設定錯誤";
-    message = "API Key 設定有誤、缺失或是已過期。\n請前往「設定」頁面輸入您的 Gemini API Key。";
-  } else if (errString.includes('network') || errString.includes('fetch')) {
-    title = "網路連線錯誤";
-    message = "請檢查您的網路連線是否正常。";
+  if (status === 503 || status === 500 || errString.includes('503') || errString.includes('500') || errString.includes('unavailable') || errString.includes('overloaded') || errString.includes('internal')) {
+    return new Error("伺服器目前忙碌中 (503/500)，請稍後再試。");
+  }
+  if (status === 429 || errString.includes('429') || errString.includes('quota') || errString.includes('rate limit')) {
+    return new Error("API 請求過於頻繁或額度已達上限 (429)，請稍等幾分鐘。");
+  }
+  if (status === 400 || errString.includes('400') || errString.includes('safety') || errString.includes('blocked') || errString.includes('format')) {
+    return new Error("請求被拒絕 (400)，可能是圖片內容觸發了安全審查機制。");
+  }
+  if (status === 401 || status === 403 || errString.includes('401') || errString.includes('403') || errString.includes('key') || errString.includes('permission') || errString.includes('unauthenticated')) {
+    return new Error("API 金鑰無效或權限不足 (401/403)。");
   }
 
-  // Dispatch custom event for UI to pick up
-  window.dispatchEvent(new CustomEvent('show-alert', {
-    detail: { title, message }
-  }));
+  return new Error("AI 解析失敗，請確認圖片內容是否清晰，或手動輸入。");
 }
 
 // Helper to strictly validate and clean tags based on whitelist
@@ -142,7 +142,7 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
@@ -183,8 +183,7 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
 
     return JSON.parse(response.text || "null");
   } catch (error) {
-    handleApiError(error);
-    return null;
+    throw handleApiError(error);
   }
 }
 
@@ -193,7 +192,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
     const ai = getGeminiClient();
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [])}` }] },
       config: {
         responseMimeType: "application/json",
@@ -218,14 +217,14 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
       }
     });
     return JSON.parse(response.text || "[]");
-  } catch (error) { handleApiError(error); return []; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function inferItemDetailsFromText(itemName: string, context: any) {
   try {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [])}` }] },
       config: {
         responseMimeType: "application/json",
@@ -245,20 +244,20 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
       }
     });
     return JSON.parse(response.text || "{}");
-  } catch (error) { handleApiError(error); return {}; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function recognizeExpiryDate(base64Image: string): Promise<string | null> {
   try {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ inlineData: { data: base64Image, mimeType: "image/jpeg" } }, { text: "辨識效期 YYYY-MM-DD。若無則回傳空字串。" }] },
       config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { expiryDate: { type: Type.STRING } } } }
     });
     const res = JSON.parse(response.text || "{}");
     return res.expiryDate || "";
-  } catch (error) { handleApiError(error); return null; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function recognizeRecipeFromImage(base64Images: string[], availableTags: string[] = [], inventoryItems: InventoryItem[] = []) {
@@ -271,7 +270,7 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [
           ...imageParts,
@@ -294,7 +293,7 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
     result.tags = cleanTags(result.tags, availableTags);
 
     return result;
-  } catch (error) { handleApiError(error); return null; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function recognizeRecipeFromText(text: string, availableTags: string[] = [], inventoryItems: InventoryItem[] = []) {
@@ -304,7 +303,7 @@ export async function recognizeRecipeFromText(text: string, availableTags: strin
     const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [{
           text: `Extract recipe data from: ${text}. ${getRecipeStrictPrompt(inventoryVocabulary)}
@@ -324,7 +323,7 @@ export async function recognizeRecipeFromText(text: string, availableTags: strin
     result.tags = cleanTags(result.tags, availableTags);
 
     return result;
-  } catch (error) { handleApiError(error); return null; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function inferRecipeTagsFromTitle(dishName: string, availableTags: string[] = []) {
@@ -333,7 +332,7 @@ export async function inferRecipeTagsFromTitle(dishName: string, availableTags: 
     const tagList = availableTags.join(', ');
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: {
         parts: [{
           text: `
@@ -360,7 +359,7 @@ export async function inferRecipeTagsFromTitle(dishName: string, availableTags: 
     result.tags = cleanTags(result.tags, availableTags);
 
     return result;
-  } catch (error) { handleApiError(error); return null; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 // --- Smart Meal Planner APIs ---
@@ -387,7 +386,7 @@ export async function recommendRecipes(inventory: InventoryItem[], recipes: Reci
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
@@ -405,7 +404,7 @@ export async function recommendRecipes(inventory: InventoryItem[], recipes: Reci
       }
     });
     return JSON.parse(response.text || "[]");
-  } catch (error) { handleApiError(error); return []; }
+  } catch (error) { throw handleApiError(error); }
 }
 
 export async function generateMealPlan(userPrompt: string, recipes: Recipe[], targetDates: string[]) {
@@ -430,7 +429,7 @@ export async function generateMealPlan(userPrompt: string, recipes: Recipe[], ta
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
@@ -460,5 +459,5 @@ export async function generateMealPlan(userPrompt: string, recipes: Recipe[], ta
     // 移除可能出現的 Markdown 標記
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
     return JSON.parse(rawText);
-  } catch (error) { handleApiError(error); return null; }
+  } catch (error) { throw handleApiError(error); }
 }

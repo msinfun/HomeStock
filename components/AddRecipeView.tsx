@@ -127,8 +127,15 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
         });
       }
-    } catch (innerError) {
+    } catch (innerError: any) {
       console.error(innerError);
+      setModalConfig({
+        isOpen: true,
+        title: '辨識失敗',
+        message: innerError instanceof Error ? innerError.message : 'AI 解析失敗，請確認圖片內容是否清晰，或手動輸入。',
+        isAlert: true,
+        onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+      });
     } finally {
       setLoading(false);
       setLoadingMode(null);
@@ -180,12 +187,12 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setModalConfig({
         isOpen: true,
         title: '分析錯誤',
-        message: '分析連結時發生錯誤，請稍後再試。',
+        message: error instanceof Error ? error.message : '分析連結或文字時發生錯誤，請稍後再試。',
         isAlert: true,
         onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
       });

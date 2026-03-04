@@ -161,9 +161,17 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
     const handleRecommend = async () => {
         setIsRecommending(true);
-        const res = await recommendRecipes(inventoryItems || [], recipes);
-        setRecommendations(res);
-        setIsRecommending(false);
+        try {
+            const res = await recommendRecipes(inventoryItems || [], recipes);
+            setRecommendations(res);
+        } catch (error: any) {
+            setModalConfig({
+                isOpen: true, title: '推薦失敗', message: error instanceof Error ? error.message : '發生未知的錯誤', isAlert: true, onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
+            });
+            setRecommendations(null);
+        } finally {
+            setIsRecommending(false);
+        }
     };
 
     const handleManualAdd = () => {
@@ -229,8 +237,9 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                 setIsAIPlanOpen(false);
                 setMealPlanPrompt('');
             }
-        } catch (e) {
+        } catch (e: any) {
             setIsPlanning(false);
+            setModalConfig({ isOpen: true, title: '排程失敗', message: e instanceof Error ? e.message : '排程時發生錯誤', isAlert: true, onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })) });
         }
     };
 
