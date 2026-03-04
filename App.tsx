@@ -112,10 +112,16 @@ const App: React.FC = () => {
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
   const [isAddingQuickShopping, setIsAddingQuickShopping] = useState(false);
   const [targetRecipeId, setTargetRecipeId] = useState<string | null>(null);
+  const [targetInventoryId, setTargetInventoryId] = useState<string | null>(null);
 
   const handleJumpToRecipe = (id: string) => {
     setTargetRecipeId(id);
     setActiveView('recipes');
+  };
+
+  const handleNavigateToInventoryItem = (id: string) => {
+    setTargetInventoryId(id);
+    setActiveView('inventory');
   };
 
   const [modalConfig, setModalConfig] = useState<{
@@ -409,8 +415,8 @@ const App: React.FC = () => {
         </header>
 
         <main className="w-full max-w-2xl px-4 py-6">
-          {activeView === 'dashboard' && <Dashboard items={items} shoppingList={shoppingList} onSwitchView={setActiveView} settings={settings} onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }} />}
-          {activeView === 'inventory' && <InventoryList items={items} shoppingList={shoppingList} onUpdate={handleUpdateItem} onScrap={(i) => handleUpdateItem({ ...i, quantity: 0 }, 'scrap')} onDelete={handleDeleteInventoryItem} onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }} onDuplicate={(i) => { const { id, ...rest } = i; setEditingItem({ ...rest, id: '' } as InventoryItem); setActiveView('add'); }} categories={categories} locations={locations} /* 🍎 傳入 locations */ onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} settings={settings} />}
+          {activeView === 'dashboard' && <Dashboard items={items} shoppingList={shoppingList} onSwitchView={setActiveView} settings={settings} onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }} onNavigateToInventoryItem={handleNavigateToInventoryItem} />}
+          {activeView === 'inventory' && <InventoryList targetInventoryId={targetInventoryId} clearTargetInventoryId={() => setTargetInventoryId(null)} items={items} shoppingList={shoppingList} onUpdate={handleUpdateItem} onScrap={(i) => handleUpdateItem({ ...i, quantity: 0 }, 'scrap')} onDelete={handleDeleteInventoryItem} onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }} onDuplicate={(i) => { const { id, ...rest } = i; setEditingItem({ ...rest, id: '' } as InventoryItem); setActiveView('add'); }} categories={categories} locations={locations} /* 🍎 傳入 locations */ onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} settings={settings} />}
           {activeView === 'recipes' && <RecipeView targetRecipeId={targetRecipeId} clearTargetRecipeId={() => setTargetRecipeId(null)} recipes={recipes} inventoryItems={items} shoppingList={shoppingList} recipeTags={recipeTags} onDelete={handleDeleteRecipe} onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} onDuplicate={(r) => { const { id, ...rest } = r; setEditingRecipe({ ...rest, id: '', name: r.name + ' (副本)' } as Recipe); setActiveView('edit-recipe'); }} onUpdate={handleUpdateRecipeDirectly} onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])} />}
           {activeView === 'meal-planner' && <MealPlannerView recipes={recipes} inventoryItems={items} handleJumpToRecipe={handleJumpToRecipe} />}
           {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}

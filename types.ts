@@ -73,6 +73,14 @@ export interface Recipe {
   review?: string; // New: Cooking review/notes
 }
 
+export interface DailyMeals {
+  breakfast: string[];
+  lunch: string[];
+  dinner: string[];
+}
+
+export type MealPlan = Record<string, DailyMeals>;
+
 // New: Hierarchical Tag Structure
 export type RecipeTagStructure = Record<string, string[]>;
 

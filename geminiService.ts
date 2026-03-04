@@ -63,11 +63,7 @@ const getRecipeStrictPrompt = (inventoryVocabulary: string = "") => `
   1. **份量智能標記 (AI Tagging)**：在 \`ingredients\` (食材清單) 與 \`steps\` (作法步驟) 中，只要遇到「需要隨份量縮放的食材數字」，一律使用 \`{{數字|單位}}\` 的格式標記。例如：\`{{60|g}}\`, \`{{1.5|大匙}}\`, \`{{2|顆}}\`。若無單位請標記為 \`{{2}}\`。
   2. **絕對不標記**：溫度、時間、容器尺寸、攪拌次數等「不可縮放」的數字，絕對不要加上標記！例如保持「180度」、「28x28cm」、「烤15分鐘」。
   3. **食材一致性**：食材清單請輸出如「高筋麵粉 {{280|g}}」的格式。
-  4. **動態食材名稱標準化 (Crucial)**：請嚴格參考下方提供的『使用者現有庫存目錄』。將食譜中的口語化食材，盡可能精準映射到目錄中已存在的『小分類』或『物品名稱』。
-     - 範例：若食譜寫『糖』，請檢視目錄，若目錄有『二砂』、『黑糖』，請依語境轉換；若目錄只有『糖』，則維持『糖』。
-     - 若食譜的食材完全不存在於目錄中，請給予一個最通用、合理的標準名稱。
-     - 轉換後的名稱必須保留原有的 {{數值|單位}} 標記格式。
-
+  4. **動態食材名稱標準化 (Crucial)**：When outputting ingredients, strictly use the 'subCategory' name from the provided inventory list if available. DO NOT use the full 'name' (e.g., use '白芝麻' instead of '九鬼-深煎りいりごま 白芝麻'). If no subCategory exists, use a short generic name. 轉換後的名稱必須保留原有的 {{數值|單位}} 標記格式。
      【使用者現有庫存目錄】：${inventoryVocabulary}
   5. **做法內嵌數量**：在 steps 提到食材時務必帶入份量並標記，如「加入 高筋麵粉 {{280|g}}」。
   6. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（例如：2）。
@@ -412,19 +408,23 @@ export async function recommendRecipes(inventory: InventoryItem[], recipes: Reci
   } catch (error) { handleApiError(error); return []; }
 }
 
-export async function generateMealPlan(recipes: Recipe[], userPrompt: string) {
+export async function generateMealPlan(userPrompt: string, recipes: Recipe[], targetDates: string[]) {
   try {
     const ai = getGeminiClient();
-    const availableRecipes = recipes.map(r => ({ id: r.id, name: r.name, tags: r.tags }));
+    const availableRecipes = recipes
+      .filter(r => !r.tags.includes('烹飪科學') && !r.tags.includes('料理筆記'))
+      .map(r => ({ id: r.id, name: r.name, tags: r.tags }));
 
     const prompt = `
-      你是一個專業的營養配餐員。請根據使用者的「特別要求」與「食譜庫」，安排一週 (週一至週日) 的早、午、晚餐。
+      你是一個專業的營養配餐員。請為以下特定日期安排餐點：
+      日期列表：${targetDates.join(', ')}
       
       **[核心規則]**
-      1. 使用者要求：${userPrompt} (例如：以雞肉為主、晚餐三菜一湯等)。若無要求請自由均衡搭配。
-      2. 只能從提供的「食譜庫」中挑選，回傳食譜的 ID。
-      3. 若一餐需要多道菜，請在陣列中回傳多個 ID。若該餐不需安排(如不吃早餐)可回傳空陣列。
-      4. 如果食譜庫的數量太少，導致菜色重複度太高 (單一食譜在一週內重複超過 3 次)，請在 'warning' 欄位中給予友善的提示，建議使用者多存一些食譜。若無此問題，warning 回傳空字串。
+      1. 使用者要求：${userPrompt} (若無要求請自由均衡搭配)。
+      2. 只能從提供的「食譜庫」中挑選，嚴格回傳食譜的「ID」(例如 '1741006526848')，絕對不能填寫食譜名稱！
+      3. 若一餐需要多道菜，請在陣列中回傳多個 ID。若該餐不需安排可回傳空陣列。
+      4. 輸出的 JSON 中，'day' 欄位必須嚴格使用上述「日期列表」中的精確字串 (YYYY-MM-DD)。
+      5. 如果食譜庫的數量太少導致重複度太高，請在 'warning' 欄位給予友善提示，否則留空。
       
       食譜庫：${JSON.stringify(availableRecipes)}
     `;
@@ -456,6 +456,9 @@ export async function generateMealPlan(recipes: Recipe[], userPrompt: string) {
         }
       }
     });
-    return JSON.parse(response.text || "null");
+    let rawText = response.text || "null";
+    // 移除可能出現的 Markdown 標記
+    rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(rawText);
   } catch (error) { handleApiError(error); return null; }
 }

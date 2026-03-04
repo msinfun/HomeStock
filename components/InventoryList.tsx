@@ -14,6 +14,8 @@ interface InventoryListProps {
   locations: string[]; // 🍎 接收從 App.tsx 傳來的位置清單
   onAddToShopping: (name: string, category: string) => void;
   settings: AppSettings;
+  targetInventoryId?: string | null;
+  clearTargetInventoryId?: () => void;
 }
 
 interface QuickAdjust {
@@ -44,7 +46,8 @@ const InventoryItemCard: React.FC<{
   onConsumeRequest: (item: InventoryItem) => void;
   isActiveSwipe?: boolean;
   onSwipeStart?: () => void;
-}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, isActiveSwipe, onSwipeStart }) => {
+  isTargetItem?: boolean;
+}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, isActiveSwipe, onSwipeStart, isTargetItem }) => {
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
@@ -89,7 +92,7 @@ const InventoryItemCard: React.FC<{
   const handleOpenItem = (e: React.MouseEvent, item: InventoryItem) => {
     e.stopPropagation();
     const today = new Date().toISOString().split('T')[0];
-    onUpdate({ ...item, openedDate: today });
+    onUpdate({ ...item, openedDate: item.openedDate ? '' : today });
   };
 
   const getExpiryBadge = (expiryDate?: string) => {
@@ -123,8 +126,9 @@ const InventoryItemCard: React.FC<{
   if (viewMode === 'review') {
     return (
       <div
+        id={`inventory-${item.id}`}
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-        className="transition-all duration-300 relative z-10 cursor-pointer hover:bg-white/80 p-5 h-full"
+        className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 transition-all duration-500 relative z-10 cursor-pointer hover:bg-white/80 p-5 h-full"
       >
         <div className="flex justify-between items-start mb-2">
           <h3 className="text-[17px] font-black tracking-tight text-slate-800">{item.name}</h3>
@@ -142,7 +146,10 @@ const InventoryItemCard: React.FC<{
   }
 
   return (
-    <div className="relative overflow-hidden group rounded-[32px]">
+    <div
+      id={`inventory-${item.id}`}
+      className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150 relative group transition-all duration-500"
+    >
       {!isBatchMode && (
         <div
           className={`absolute inset-0 bg-transparent flex justify-end items-center px-6 z-0 rounded-[32px] transition-opacity duration-300 ${offsetX === 0 ? 'opacity-0' : 'opacity-100'}`}
@@ -424,6 +431,26 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     message: '',
     onConfirm: () => { },
   });
+
+  useEffect(() => {
+    if (props.targetInventoryId) {
+      setExpandedItemIds(prev => new Set(prev).add(props.targetInventoryId!));
+
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`inventory-${props.targetInventoryId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_20px_rgba(0,122,255,0.3)]', 'transition-all', 'duration-1000');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_20px_rgba(0,122,255,0.3)]');
+            if (props.clearTargetInventoryId) props.clearTargetInventoryId(); // 加入這行確保狀態重置
+          }, 2000);
+        }
+      }, 300); // 稍微延長延遲確保卡片已展開渲染
+
+      return () => clearTimeout(timer);
+    }
+  }, [props.targetInventoryId]);
 
   const toggleItemExpansion = (id: string) => {
     setExpandedItemIds(prev => {
@@ -775,28 +802,28 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           </div>
         ) : (
           sortedItems.map(item => (
-            <div key={item.id} className="mb-4 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] overflow-hidden bg-gradient-to-br from-white/95 to-white/40 backdrop-blur-[40px] backdrop-saturate-150">
-              <InventoryItemCard
-                item={item}
-                isExpanded={expandedItemIds.has(item.id)}
-                selectedIds={selectedIds}
-                isBatchMode={isBatchMode}
-                viewMode={viewMode}
-                shoppingList={props.shoppingList}
-                settings={props.settings}
-                onToggleExpansion={toggleItemExpansion}
-                onToggleSelection={toggleSelection}
-                onEdit={props.onEdit}
-                onDuplicate={props.onDuplicate}
-                onScrapRequest={requestScrap}
-                onDeleteRequest={props.onDelete}
-                onAddToShopping={props.onAddToShopping}
-                onUpdate={props.onUpdate}
-                onConsumeRequest={requestConsume}
-                isActiveSwipe={activeSwipeId === item.id}
-                onSwipeStart={() => setActiveSwipeId(item.id)}
-              />
-            </div>
+            <InventoryItemCard
+              key={item.id}
+              item={item}
+              isExpanded={expandedItemIds.has(item.id)}
+              selectedIds={selectedIds}
+              isBatchMode={isBatchMode}
+              viewMode={viewMode}
+              shoppingList={props.shoppingList}
+              settings={props.settings}
+              onToggleExpansion={toggleItemExpansion}
+              onToggleSelection={toggleSelection}
+              onEdit={props.onEdit}
+              onDuplicate={props.onDuplicate}
+              onScrapRequest={requestScrap}
+              onDeleteRequest={props.onDelete}
+              onAddToShopping={props.onAddToShopping}
+              onUpdate={props.onUpdate}
+              onConsumeRequest={requestConsume}
+              isActiveSwipe={activeSwipeId === item.id}
+              onSwipeStart={() => setActiveSwipeId(item.id)}
+              isTargetItem={props.targetInventoryId === item.id}
+            />
           ))
         )}
       </div>

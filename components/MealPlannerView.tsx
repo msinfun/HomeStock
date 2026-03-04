@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Recipe, InventoryItem } from '../types';
+import { Recipe, InventoryItem, DailyMeals, MealPlan } from '../types';
 import { recommendRecipes, generateMealPlan } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -10,14 +10,6 @@ interface MealPlannerViewProps {
 }
 
 type MealType = 'breakfast' | 'lunch' | 'dinner';
-
-interface DailyMeals {
-    breakfast: string[];
-    lunch: string[];
-    dinner: string[];
-}
-
-type MealData = Record<string, DailyMeals>;
 
 const getLocalDateString = (date: Date) => {
     const year = date.getFullYear();
@@ -98,7 +90,7 @@ const MealItemCard: React.FC<{
                     className="transition-transform active:scale-95 flex flex-col items-center h-full px-2 justify-center gap-1"
                 >
                     <svg className="text-[#FF3B30]" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                    <span className="text-slate-800 text-[10px] font-black mt-1 uppercase tracking-widest">?�除</span>
+                    <span className="text-slate-800 text-[10px] font-black mt-1 uppercase tracking-widest">刪除</span>
                 </button>
             </div>
 
@@ -119,7 +111,7 @@ const MealItemCard: React.FC<{
 
 const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryItems, handleJumpToRecipe }) => {
     const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString(new Date()));
-    const [mealData, setMealData] = useState<MealData>(() => {
+    const [mealData, setMealData] = useState<MealPlan>(() => {
         try {
             const saved = localStorage.getItem('homestock_meal_calendar');
             return saved ? JSON.parse(saved) : {};
@@ -193,39 +185,43 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
     const handleAIPlan = async () => {
         setIsPlanning(true);
-        const res = await generateMealPlan(recipes, mealPlanPrompt);
-        setIsPlanning(false);
+        try {
+            const prompt = mealPlanPrompt.trim() || '請幫我安排均衡的一週餐點。';
+            // 獲取當週的 7 個日期字串
+            const targetDates = weekDates.map(w => w.dateStr);
+            const res = await generateMealPlan(prompt, recipes, targetDates);
+            setIsPlanning(false);
 
-        if (res && res.plan) {
-            // mapping logic
-            setMealData(prev => {
-                const next = { ...prev };
-                const week = getWeekDates(selectedDate); // get the week based on current selection
+            if (res && res.plan) {
+                // mapping logic
+                setMealData(prev => {
+                    const next = { ...prev };
 
-                res.plan.forEach(dayPlan => {
-                    const targetDayName = dayPlan.day; // e.g. "星期一"
-                    const mappedDateObj = week.find(d => d.dayName === targetDayName);
+                    res.plan.forEach((dayPlan: any) => {
+                        const targetDate = dayPlan.day; // 剛好是 YYYY-MM-DD
 
-                    if (mappedDateObj) {
-                        next[mappedDateObj.dateStr] = {
+                        // 確保目標日期在目前正在顯示的這週（或者如果 AI 有安排，直接更新也可以）
+                        next[targetDate] = {
                             breakfast: dayPlan.breakfast || [],
                             lunch: dayPlan.lunch || [],
                             dinner: dayPlan.dinner || []
                         };
-                    }
+                    });
+
+                    return next;
                 });
 
-                return next;
-            });
+                if (res.warning) {
+                    setTimeout(() => {
+                        setModalConfig({ isOpen: true, title: '貼心提醒', message: res.warning!, isAlert: true, onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })) });
+                    }, 100);
+                }
 
-            if (res.warning) {
-                setTimeout(() => {
-                    setModalConfig({ isOpen: true, title: '貼心提醒', message: res.warning!, isAlert: true, onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })) });
-                }, 100);
+                setIsAIPlanOpen(false);
+                setMealPlanPrompt('');
             }
-
-            setIsAIPlanOpen(false);
-            setMealPlanPrompt('');
+        } catch (e) {
+            setIsPlanning(false);
         }
     };
 
@@ -336,7 +332,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                             {!hasRecipes && <span className="text-[12px] font-bold text-slate-400 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-[0_2px_4px_rgba(0,0,0,0.02)]">沒有食譜</span>}
                                         </div>
 
-                                        {hasRecipes ? (
+                                        {hasRecipes && (
                                             <div className="space-y-2 mt-1">
                                                 {targetIds.map((id, index) => {
                                                     const r = recipes.find(x => x.id === id);
@@ -351,12 +347,12 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                                     )
                                                 })}
                                             </div>
-                                        ) : (
-                                            <button onClick={() => { setManualAddDate(selectedDate); setManualAddMeal(meal); setIsManualAddOpen(true); }} className="mt-1 w-full flex items-center justify-center border border-dashed border-slate-300/50 text-slate-400 hover:text-[#007AFF] hover:border-[#007AFF]/30 hover:bg-blue-50/50 rounded-[24px] transition-all cursor-pointer group font-bold text-[13px] gap-1.5 active:scale-95 focus:outline-none bg-transparent py-3.5">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                                                新增{mealName}
-                                            </button>
                                         )}
+
+                                        <button onClick={() => { setManualAddDate(selectedDate); setManualAddMeal(meal); setIsManualAddOpen(true); }} className="mt-2 w-full flex items-center justify-center border border-dashed border-slate-300/50 text-slate-400 hover:text-[#007AFF] hover:border-[#007AFF]/30 hover:bg-blue-50/50 rounded-[24px] transition-all cursor-pointer group font-bold text-[13px] gap-1.5 active:scale-95 bg-transparent py-3.5 outline-none focus:outline-none focus:ring-0">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="group-hover:scale-110 transition-transform"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                                            新增{mealName}餐點
+                                        </button>
                                     </div>
                                 </div>
                             );
@@ -367,8 +363,8 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* Manual Add Modal */}
             {isManualAddOpen && (
-                <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4 pb-28 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
-                    <div className="bg-white/90 backdrop-blur-md w-full sm:max-w-md rounded-[32px] mb-20 sm:mb-0 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[75vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} onClick={() => setIsManualAddOpen(false)}>
+                    <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[80dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900">新增一次餐食</h3>
                             <button onClick={() => setIsManualAddOpen(false)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
@@ -376,10 +372,10 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
-                            <div>
+                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 pb-40">
+                            <div className="flex-1 min-w-0 overflow-hidden">
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">日期</label>
-                                <input type="date" value={manualAddDate} onChange={e => setManualAddDate(e.target.value)} className="w-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all" />
+                                <input type="date" value={manualAddDate} onChange={e => setManualAddDate(e.target.value)} className="w-full min-w-0 box-border appearance-none shrink-0 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all" />
                             </div>
 
                             <div>
@@ -431,7 +427,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                         className="w-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 placeholder:font-bold outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all"
                                     />
                                     {isDropdownOpen && (
-                                        <div className="absolute z-10 w-full mt-2 bg-white/95 backdrop-blur-xl border border-white/60 rounded-[24px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-white/60 rounded-[24px] shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-h-48 overflow-y-auto custom-scrollbar">
                                             {recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).length > 0 ? (
                                                 recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).map(r => (
                                                     <div key={r.id} onClick={() => { setManualAddRecipeId(r.id); setRecipeSearch(r.name); setIsDropdownOpen(false); }} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0">
@@ -447,7 +443,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             </div>
                         </div>
 
-                        <div className="p-6 shrink-0 border-t border-slate-100 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+                        <div className="px-6 py-5 shrink-0 border-t border-transparent">
                             <button onClick={handleManualAdd} className="w-full py-4 rounded-full font-black text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)] hover:bg-blue-600 active:scale-[0.96] transition-all text-[15px] tracking-widest">
                                 確認新增
                             </button>
@@ -458,8 +454,8 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* AI Plan Modal */}
             {isAIPlanOpen && (
-                <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center p-4 pb-28 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
-                    <div className="bg-white/90 backdrop-blur-md w-full sm:max-w-md rounded-[32px] mb-20 sm:mb-0 shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[75vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} onClick={() => setIsAIPlanOpen(false)}>
+                    <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[80dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
@@ -470,7 +466,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1">
+                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 pb-40">
                             <div>
                                 <p className="text-[13px] font-bold text-slate-500 mb-4 leading-relaxed bg-slate-50 p-4 rounded-[20px] border border-slate-100 text-center">
                                     AI 將根據 <strong className="text-slate-800 tracking-widest">{selectedDate} 的餐食計畫</strong>，為您自動推薦適合的食譜餐點
@@ -485,7 +481,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             </div>
                         </div>
 
-                        <div className="p-6 shrink-0 border-t border-slate-100 bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+                        <div className="px-6 py-5 shrink-0 border-t border-transparent">
                             <button onClick={handleAIPlan} disabled={isPlanning} className="w-full py-4 rounded-full font-black text-white bg-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)] hover:bg-blue-600 active:scale-[0.96] transition-all text-[15px] tracking-widest disabled:opacity-70 disabled:active:scale-100 flex items-center justify-center gap-2">
                                 {isPlanning ? (
                                     <><svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> AI 規劃中..</>

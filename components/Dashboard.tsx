@@ -8,6 +8,7 @@ interface DashboardProps {
   settings: AppSettings;
   onAddToShopping: (name: string, category: string) => void;
   onEdit: (item: InventoryItem) => void;
+  onNavigateToInventoryItem?: (id: string) => void;
 }
 
 // Helper interface for aggregated restocking
@@ -21,7 +22,7 @@ interface RestockGroup {
   nextRestockDate: string | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView, settings, onAddToShopping, onEdit }) => {
+const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView, settings, onAddToShopping, onEdit, onNavigateToInventoryItem }) => {
   const [isRestockExpanded, setIsRestockExpanded] = useState(false);
   const [isExpiryExpanded, setIsExpiryExpanded] = useState(true);
 
@@ -182,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
             {displayedExpiryItems.map(item => (
               <li
                 key={item.id}
-                onClick={() => onEdit(item)}
+                onClick={() => onNavigateToInventoryItem ? onNavigateToInventoryItem(item.id) : onEdit(item)}
                 // 🍎 內部小卡片：去除高光，回歸乾淨的半透白板與柔和陰影
                 className="flex justify-between items-center gap-3 p-4 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] cursor-pointer hover:bg-white active:scale-[0.98] transition-all rounded-[24px]"
               >
