@@ -7,6 +7,8 @@ interface MealPlannerViewProps {
     recipes: Recipe[];
     inventoryItems: InventoryItem[];
     handleJumpToRecipe: (id: string) => void;
+    mealData: MealPlan;
+    setMealData: React.Dispatch<React.SetStateAction<MealPlan>>;
 }
 
 type MealType = 'breakfast' | 'lunch' | 'dinner';
@@ -118,14 +120,8 @@ const MealItemCard: React.FC<{
     );
 };
 
-const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryItems, handleJumpToRecipe }) => {
+const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryItems, handleJumpToRecipe, mealData, setMealData }) => {
     const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateString(new Date()));
-    const [mealData, setMealData] = useState<MealPlan>(() => {
-        try {
-            const saved = localStorage.getItem('homestock_meal_calendar');
-            return saved ? JSON.parse(saved) : {};
-        } catch { return {}; }
-    });
 
     const [isManualAddOpen, setIsManualAddOpen] = useState(false);
     const [isAIPlanOpen, setIsAIPlanOpen] = useState(false);
@@ -145,11 +141,6 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
     // AI Plan State
     const [isPlanning, setIsPlanning] = useState(false);
     const [mealPlanPrompt, setMealPlanPrompt] = useState('');
-
-    // Save to LocalStorage whenever mealData changes
-    useEffect(() => {
-        localStorage.setItem('homestock_meal_calendar', JSON.stringify(mealData));
-    }, [mealData]);
 
     // Sync manual add date with selected date when opening modal
     useEffect(() => {

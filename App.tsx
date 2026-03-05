@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { InventoryItem, ShoppingItem, ViewState, AppSettings, InventoryDef, InventoryTransaction, InventoryBatch, Recipe, SystemBackup, RecipeTagStructure } from './types';
+import { InventoryItem, ShoppingItem, ViewState, AppSettings, InventoryDef, InventoryTransaction, InventoryBatch, Recipe, SystemBackup, RecipeTagStructure, MealPlan } from './types';
 import Dashboard from './components/Dashboard';
 import InventoryList from './components/InventoryList';
 import ShoppingListView from './components/ShoppingListView';
@@ -107,6 +107,13 @@ const App: React.FC = () => {
     } catch (e) { return DEFAULT_SETTINGS; }
   });
 
+  const [mealPlans, setMealPlans] = useState<MealPlan>(() => {
+    try {
+      const saved = localStorage.getItem('homestock_meal_calendar');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+
   const [activeView, setActiveView] = useState<ViewState>('dashboard');
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
@@ -163,7 +170,8 @@ const App: React.FC = () => {
     localStorage.setItem('homestock_settings', JSON.stringify(settings));
     localStorage.setItem('homestock_recipes', JSON.stringify(recipes));
     localStorage.setItem('homestock_recipe_tags', JSON.stringify(recipeTags));
-  }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags]);
+    localStorage.setItem('homestock_meal_calendar', JSON.stringify(mealPlans));
+  }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags, mealPlans]);
 
   useEffect(() => { window.scrollTo(0, 0); }, [activeView]);
 
@@ -314,6 +322,7 @@ const App: React.FC = () => {
       setShoppingList(data.shoppingList || []); setSettings(data.settings || DEFAULT_SETTINGS);
       setCategories(data.categories || DEFAULT_CATEGORIES); setLocations(data.locations || DEFAULT_LOCATIONS);
       setRecipeTags(data.recipeTags || DEFAULT_RECIPE_TAGS);
+      setMealPlans(data.mealPlans || {});
     } else {
       // Merge logic...
       setDefs(prev => { const map = new Map(prev.map(i => [i.id, i])); data.defs.forEach(i => map.set(i.id, i)); return Array.from(map.values()); });
@@ -328,6 +337,20 @@ const App: React.FC = () => {
           const next = { ...prev };
           Object.entries(data.recipeTags || {}).forEach(([key, values]) => {
             if (!next[key]) next[key] = []; next[key] = Array.from(new Set([...next[key], ...values]));
+          });
+          return next;
+        });
+      }
+      if (data.mealPlans) {
+        setMealPlans(prev => {
+          const next = { ...prev };
+          Object.entries(data.mealPlans || {}).forEach(([date, newDayMeals]: [string, any]) => {
+            if (!next[date]) {
+              next[date] = { breakfast: [], lunch: [], dinner: [] };
+            }
+            next[date].breakfast = Array.from(new Set([...next[date].breakfast, ...(newDayMeals.breakfast || [])]));
+            next[date].lunch = Array.from(new Set([...next[date].lunch, ...(newDayMeals.lunch || [])]));
+            next[date].dinner = Array.from(new Set([...next[date].dinner, ...(newDayMeals.dinner || [])]));
           });
           return next;
         });
@@ -418,7 +441,7 @@ const App: React.FC = () => {
           {activeView === 'dashboard' && <Dashboard items={items} shoppingList={shoppingList} onSwitchView={setActiveView} settings={settings} onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} onEdit={(item) => { setEditingItem(item); setActiveView('edit'); }} onNavigateToInventoryItem={handleNavigateToInventoryItem} />}
           {activeView === 'inventory' && <InventoryList targetInventoryId={targetInventoryId} clearTargetInventoryId={() => setTargetInventoryId(null)} items={items} shoppingList={shoppingList} onUpdate={handleUpdateItem} onScrap={(i) => handleUpdateItem({ ...i, quantity: 0 }, 'scrap')} onDelete={handleDeleteInventoryItem} onEdit={(i) => { setEditingItem(i); setActiveView('edit'); }} onDuplicate={(i) => { const { id, ...rest } = i; setEditingItem({ ...rest, id: '' } as InventoryItem); setActiveView('add'); }} categories={categories} locations={locations} /* 🍎 傳入 locations */ onAddToShopping={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} settings={settings} />}
           {activeView === 'recipes' && <RecipeView targetRecipeId={targetRecipeId} clearTargetRecipeId={() => setTargetRecipeId(null)} recipes={recipes} inventoryItems={items} shoppingList={shoppingList} recipeTags={recipeTags} onDelete={handleDeleteRecipe} onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} onDuplicate={(r) => { const { id, ...rest } = r; setEditingRecipe({ ...rest, id: '', name: r.name + ' (副本)' } as Recipe); setActiveView('edit-recipe'); }} onUpdate={handleUpdateRecipeDirectly} onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])} />}
-          {activeView === 'meal-planner' && <MealPlannerView recipes={recipes} inventoryItems={items} handleJumpToRecipe={handleJumpToRecipe} />}
+          {activeView === 'meal-planner' && <MealPlannerView recipes={recipes} inventoryItems={items} handleJumpToRecipe={handleJumpToRecipe} mealData={mealPlans} setMealData={setMealPlans} />}
           {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
           {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
           {activeView === 'shopping' && <ShoppingListView shoppingList={shoppingList} onRemove={handleDeleteShoppingItem} onToggle={(id) => setShoppingList(prev => prev.map(s => s.id === id ? { ...s, isChecked: !s.isChecked } : s))} showAddQuickItem={isAddingQuickShopping} onCloseAddQuickItem={() => setIsAddingQuickShopping(false)} onAddQuickItem={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} categories={categories} existingItems={items} />}
@@ -429,6 +452,7 @@ const App: React.FC = () => {
               categories={categories} onUpdateCategories={setCategories} onRenameCategory={handleRenameCategory}
               locations={locations} onUpdateLocations={setLocations} onRenameLocation={handleRenameLocation}
               recipeTags={recipeTags} onUpdateRecipeTags={setRecipeTags} onRenameRecipeTag={handleRenameRecipeTag}
+              mealPlans={mealPlans}
               onBack={() => setActiveView('dashboard')}
               items={items} defs={defs} transactions={transactions} recipes={recipes} shoppingList={shoppingList}
               onExcelImport={handleExcelImport} onSystemRestore={handleSystemRestore} onClearAllData={handleClearAllData}

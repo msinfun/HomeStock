@@ -101,6 +101,7 @@ export interface SystemBackup {
     categories: string[];
     locations: string[];
     recipeTags?: RecipeTagStructure; // Added to backup
+    mealPlans?: MealPlan; // Added to backup
   };
 }
 

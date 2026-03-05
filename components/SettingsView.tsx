@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
-import { AppSettings, InventoryItem, InventoryDef, InventoryTransaction, Recipe, ShoppingItem, SystemBackup, RecipeTagStructure } from '../types';
+import { AppSettings, InventoryItem, InventoryDef, InventoryTransaction, Recipe, ShoppingItem, SystemBackup, RecipeTagStructure, MealPlan } from '../types';
 import ConfirmationModal from './ConfirmationModal';
 import InputModal from './InputModal';
 
@@ -16,6 +16,7 @@ interface SettingsViewProps {
   recipeTags: RecipeTagStructure;
   onUpdateRecipeTags: (tags: RecipeTagStructure) => void;
   onRenameRecipeTag: (parent: string, oldChild: string, newChild: string) => void;
+  mealPlans: MealPlan;
   onBack: () => void;
   items: InventoryItem[];
   defs: InventoryDef[];
@@ -34,6 +35,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   categories, onUpdateCategories, onRenameCategory,
   locations, onUpdateLocations, onRenameLocation,
   recipeTags, onUpdateRecipeTags, onRenameRecipeTag,
+  mealPlans,
   onBack, items, defs, transactions, recipes, shoppingList,
   onExcelImport, onSystemRestore, onClearAllData
 }) => {
@@ -159,7 +161,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const handleJsonExport = async () => {
-    const backup: SystemBackup = { version: '1.0', timestamp: new Date().toISOString(), data: { defs, transactions, recipes, shoppingList, settings, categories, locations, recipeTags } };
+    const backup: SystemBackup = { version: '1.0', timestamp: new Date().toISOString(), data: { defs, transactions, recipes, shoppingList, settings, categories, locations, recipeTags, mealPlans } };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
     const fileName = `HomeStock_Backup_${new Date().toISOString().split('T')[0]}.json`;
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
