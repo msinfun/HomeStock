@@ -63,8 +63,33 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   }, []);
 
   const saveApiKey = () => {
-    localStorage.setItem('gemini_api_key', apiKey.trim());
-    setConfirmConfig({ isOpen: true, title: '設定成功', message: 'API Key 已儲存！您可以開始使用 AI 功能了。', isAlert: true, confirmText: '太好了', onConfirm: () => { setConfirmConfig(prev => ({ ...prev, isOpen: false })); setActivePage('main'); } });
+    const trimmedKey = apiKey.trim();
+    localStorage.setItem('gemini_api_key', trimmedKey);
+
+    if (trimmedKey) {
+      setConfirmConfig({
+        isOpen: true,
+        title: '設定成功',
+        message: 'API Key 已儲存！您可以開始使用 AI 功能了。',
+        isAlert: true,
+        confirmText: '太好了',
+        onConfirm: () => {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+          setActivePage('main');
+        }
+      });
+    } else {
+      setConfirmConfig({
+        isOpen: true,
+        title: '已清除',
+        message: 'API Key 已清除。在重新設定之前，AI 相關功能將無法使用。',
+        isAlert: true,
+        confirmText: '了解',
+        onConfirm: () => {
+          setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      });
+    }
   };
 
   // 🍎 修復核心 Bug：補回四個遺失的儲存與新增函數
@@ -400,7 +425,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
       {pendingBackup && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150">
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6">
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 overscroll-contain">
             <h3 className="text-xl font-black text-slate-900 mb-2 text-center tracking-tighter">選擇還原模式</h3>
             <p className="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">您選擇了一個備份檔案 ({new Date(pendingBackup.timestamp).toLocaleDateString()})。<br />請問您希望如何處理現有資料？</p>
             <div className="space-y-3">

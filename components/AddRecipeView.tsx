@@ -250,281 +250,298 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
     onSave(form);
   };
 
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
-    <div className="space-y-6 pb-10 animate-in fade-in duration-300">
-      <div className="flex items-center justify-between">
-        <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
-          {initialData ? '編輯食譜' : '新增食譜'}
-        </h2>
+    <div className="fixed inset-0 z-[100] bg-[#F2F2F7] overflow-y-auto overscroll-contain h-[100dvh] custom-scrollbar animate-in slide-in-from-bottom duration-300">
+
+      {/* Blurred Blob Background from Dashboard */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-5%] right-[-10%] w-[350px] h-[350px] rounded-full bg-blue-500/15 blur-[80px]"></div>
+        <div className="absolute top-[25%] left-[-15%] w-[300px] h-[300px] rounded-full bg-emerald-400/15 blur-[100px]"></div>
+        <div className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-purple-400/15 blur-[120px]"></div>
       </div>
 
-      {!initialData && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            {/* 🍎 AI 按鈕升級：與 Dashboard 完全相同的 iOS 頂級玻璃浮雕卡片 */}
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => fileInputRef.current?.click()}
-              className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-            >
-              {loading && loadingMode === 'scan' ? (
-                <>
-                  <svg className="animate-spin h-7 w-7 text-[#007AFF]" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  <span className="text-[13px] font-black tracking-wide text-[#007AFF] mt-3 animate-pulse">辨識食材...</span>
-                </>
-              ) : (
-                <>
-                  <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
-                  </div>
-                  <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">拍照轉食譜</span>
-                </>
-              )}
-              <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" multiple className="hidden" />
-            </button>
-
-            <button
-              type="button"
-              disabled={loading}
-              onClick={() => setShowUrlInput(true)}
-              className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
-                }`}
-            >
-              {loading && loadingMode === 'youtube' ? (
-                <>
-                  <svg className="animate-spin h-7 w-7 text-[#FF3B30]" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  <span className="text-[13px] font-black tracking-wide text-[#FF3B30] mt-3 animate-pulse">提取內容...</span>
-                </>
-              ) : (
-                <>
-                  <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <line x1="10" y1="9" x2="8" y2="9" />
-                    </svg>
-                  </div>
-                  <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">文字轉食譜</span>
-                </>
-              )}
-            </button>
-          </div>
-          {loading && (
-            <p className="text-center text-[11px] text-slate-400 font-bold animate-pulse mt-2 tracking-widest uppercase">
-              AI 分析中，這可能需要幾秒鐘...
-            </p>
-          )}
+      <div className="relative z-10 w-full max-w-2xl mx-auto px-4 py-8 space-y-6 pb-32">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[20px] font-black tracking-tighter text-slate-800 drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+            {initialData ? '編輯食譜' : '新增食譜'}
+          </h2>
         </div>
-      )}
 
-      {/* URL Input Modal：升級為毛玻璃圓角 */}
-      {showUrlInput && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => !loading && setShowUrlInput(false)}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">貼上內容</h3>
-            <p className="text-sm text-slate-500 mb-6 font-bold text-center">AI 會自動分析文字食譜。</p>
-            <textarea
-              autoFocus
-              disabled={loading}
-              className="w-full px-5 py-4 rounded-3xl bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-              value={urlOrText}
-              onChange={e => setUrlOrText(e.target.value)}
-              placeholder="貼上文字內容"
-            />
-            <div className="grid grid-cols-2 gap-3">
+        {!initialData && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-4">
+              {/* 🍎 AI 按鈕升級：與 Dashboard 完全相同的 iOS 頂級玻璃浮雕卡片 */}
               <button
-                onClick={() => setShowUrlInput(false)}
+                type="button"
                 disabled={loading}
-                className="py-3.5 rounded-full font-black text-slate-500 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:bg-slate-50 active:scale-[0.96] transition-all disabled:opacity-50 text-sm"
-              >
-                取消
-              </button>
-              <button
-                onClick={handleUrlAnalysis}
-                disabled={loading || !urlOrText.trim()}
-                className={`py-3.5 rounded-full font-black text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)] flex items-center justify-center gap-2 transition-all active:scale-[0.96] text-sm ${loading ? 'bg-blue-400 cursor-wait' : 'bg-[#007AFF] hover:bg-blue-600'
+                onClick={() => fileInputRef.current?.click()}
+                className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
                   }`}
               >
-                {loading ? (
+                {loading && loadingMode === 'scan' ? (
                   <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    分析中...
+                    <svg className="animate-spin h-7 w-7 text-[#007AFF]" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span className="text-[13px] font-black tracking-wide text-[#007AFF] mt-3 animate-pulse">辨識食材...</span>
                   </>
                 ) : (
-                  '開始分析'
+                  <>
+                    <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" /><circle cx="12" cy="13" r="3" /></svg>
+                    </div>
+                    <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">拍照轉食譜</span>
+                  </>
+                )}
+                <input type="file" ref={fileInputRef} onChange={handleScan} accept="image/*" multiple className="hidden" />
+              </button>
+
+              <button
+                type="button"
+                disabled={loading}
+                onClick={() => setShowUrlInput(true)}
+                className={`bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden ${loading ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+              >
+                {loading && loadingMode === 'youtube' ? (
+                  <>
+                    <svg className="animate-spin h-7 w-7 text-[#FF3B30]" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span className="text-[13px] font-black tracking-wide text-[#FF3B30] mt-3 animate-pulse">提取內容...</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="p-3 bg-white rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-slate-50/50 text-[#007AFF]">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <line x1="10" y1="9" x2="8" y2="9" />
+                      </svg>
+                    </div>
+                    <span className="text-[14px] font-black tracking-wide text-slate-700 mt-3 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)]">文字轉食譜</span>
+                  </>
                 )}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 🍎 整個大表單區塊：玻璃透視感 + 32px 大圓角 */}
-      <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理名稱</label>
-          <input
-            required
-            type="text"
-            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-            value={form.name}
-            onChange={e => setForm({ ...form, name: e.target.value })}
-            onBlur={handleNameBlur}
-            placeholder="例如：番茄炒蛋"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">份量 (人份)</label>
-          <input
-            type="number"
-            min="1"
-            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-            value={form.servings || ''}
-            onChange={e => setForm({ ...form, servings: e.target.value ? parseInt(e.target.value) : undefined })}
-            onWheel={e => e.currentTarget.blur()}
-            placeholder="例如：2 (人份)"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">來源連結</label>
-          <input
-            type="text"
-            className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-            value={form.sourceLink || ''}
-            onChange={e => setForm({ ...form, sourceLink: e.target.value })}
-            placeholder="https://..."
-          />
-        </div>
-
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2 px-1">
-            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">智慧標籤 (Tags)</label>
-            {isTagLoading && (
-              <span className="flex items-center gap-1 text-[10px] text-[#007AFF] font-black tracking-widest animate-pulse">
-                <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                分析中...
-              </span>
+            {loading && (
+              <p className="text-center text-[11px] text-slate-400 font-bold animate-pulse mt-2 tracking-widest uppercase">
+                AI 分析中，這可能需要幾秒鐘...
+              </p>
             )}
           </div>
+        )}
 
-          <div className="flex flex-wrap gap-2 mb-3">
-            {form.tags.map(tag => (
-              /* 已選標籤：膠囊化、去除多餘邊框 */
-              <span key={tag} className="inline-flex items-center gap-1.5 bg-blue-50/80 text-[#007AFF] px-3.5 py-1.5 rounded-full text-sm font-black border border-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] animate-in zoom-in duration-200 tracking-widest">
-                {tag}
-                <button type="button" onClick={() => toggleTag(tag)} className="hover:text-blue-900 active:scale-90 transition-transform">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+        {/* URL Input Modal：升級為毛玻璃圓角 */}
+        {showUrlInput && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => !loading && setShowUrlInput(false)}>
+            <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">貼上內容</h3>
+              <p className="text-sm text-slate-500 mb-6 font-bold text-center">AI 會自動分析文字食譜。</p>
+              <textarea
+                autoFocus
+                disabled={loading}
+                className="w-full px-5 py-4 rounded-3xl bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                value={urlOrText}
+                onChange={e => setUrlOrText(e.target.value)}
+                placeholder="貼上文字內容"
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setShowUrlInput(false)}
+                  disabled={loading}
+                  className="py-3.5 rounded-full font-black text-slate-500 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:bg-slate-50 active:scale-[0.96] transition-all disabled:opacity-50 text-sm"
+                >
+                  取消
                 </button>
-              </span>
-            ))}
+                <button
+                  onClick={handleUrlAnalysis}
+                  disabled={loading || !urlOrText.trim()}
+                  className={`py-3.5 rounded-full font-black text-white shadow-[0_4px_12px_rgba(0,122,255,0.2)] flex items-center justify-center gap-2 transition-all active:scale-[0.96] text-sm ${loading ? 'bg-blue-400 cursor-wait' : 'bg-[#007AFF] hover:bg-blue-600'
+                    }`}
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                      分析中...
+                    </>
+                  ) : (
+                    '開始分析'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🍎 整個大表單區塊：玻璃透視感 + 32px 大圓角 */}
+        <form onSubmit={handleSubmit} className="space-y-5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理名稱</label>
+            <input
+              required
+              type="text"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+              onBlur={handleNameBlur}
+              placeholder="例如：番茄炒蛋"
+            />
           </div>
 
-          {/* 標籤選擇器大框：玻璃透視感 */}
-          <div className="border border-white/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
-            {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
-              <div key={parent} className="border-b border-white/60 last:border-none">
-                <button
-                  type="button"
-                  onClick={() => setExpandedTagCategory(expandedTagCategory === parent ? null : parent)}
-                  className="w-full px-5 py-3.5 flex justify-between items-center bg-white/90 hover:bg-white/80 text-left transition-colors"
-                >
-                  <span className="text-xs font-black tracking-wider text-slate-700">{parent}</span>
-                  <svg className={`text-slate-400 w-4 h-4 transition-transform ${expandedTagCategory === parent ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">份量 (人份)</label>
+            <input
+              type="number"
+              min="1"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              value={form.servings || ''}
+              onChange={e => setForm({ ...form, servings: e.target.value ? parseInt(e.target.value) : undefined })}
+              onWheel={e => e.currentTarget.blur()}
+              placeholder="例如：2 (人份)"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">來源連結</label>
+            <input
+              type="text"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              value={form.sourceLink || ''}
+              onChange={e => setForm({ ...form, sourceLink: e.target.value })}
+              placeholder="https://..."
+            />
+          </div>
+
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 px-1">
+              <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">智慧標籤 (Tags)</label>
+              {isTagLoading && (
+                <span className="flex items-center gap-1 text-[10px] text-[#007AFF] font-black tracking-widest animate-pulse">
+                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                  分析中...
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {form.tags.map(tag => (
+                /* 已選標籤：膠囊化、去除多餘邊框 */
+                <span key={tag} className="inline-flex items-center gap-1.5 bg-blue-50/80 text-[#007AFF] px-3.5 py-1.5 rounded-full text-sm font-black border border-white shadow-[0_1px_2px_rgba(0,0,0,0.03)] animate-in zoom-in duration-200 tracking-widest">
+                  {tag}
+                  <button type="button" onClick={() => toggleTag(tag)} className="hover:text-blue-900 active:scale-90 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                  </button>
+                </span>
+              ))}
+            </div>
+
+            {/* 標籤選擇器大框：玻璃透視感 */}
+            <div className="border border-white/60 rounded-3xl overflow-hidden bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+              {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => (
+                <div key={parent} className="border-b border-white/60 last:border-none">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedTagCategory(expandedTagCategory === parent ? null : parent)}
+                    className="w-full px-5 py-3.5 flex justify-between items-center bg-white/90 hover:bg-white/80 text-left transition-colors"
+                  >
+                    <span className="text-xs font-black tracking-wider text-slate-700">{parent}</span>
+                    <svg className={`text-slate-400 w-4 h-4 transition-transform ${expandedTagCategory === parent ? 'rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                  </button>
+                  {expandedTagCategory === parent && (
+                    <div className="p-4 flex flex-wrap gap-2.5 bg-white/80 animate-in slide-in-from-top-2">
+                      {children.map((child: string) => (
+                        <button
+                          key={child}
+                          type="button"
+                          onClick={() => toggleTag(child)}
+                          className={`text-xs px-3.5 py-1.5 rounded-full border transition-all active:scale-95 font-bold tracking-wider ${form.tags.includes(child)
+                            ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)]'
+                            : 'bg-white text-slate-500 border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:border-blue-200 hover:text-[#007AFF]'
+                            }`}
+                        >
+                          {child}
+                        </button>
+                      ))}
+                      {children.length === 0 && <span className="text-[11px] text-slate-400 font-bold">無選項</span>}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-3 border-t border-white/60 pt-5">
+            <div className="flex justify-between items-center px-1">
+              <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">食材準備區</label>
+              <span className="text-[10px] font-bold text-slate-400">合併輸入名稱與份量</span>
+            </div>
+            {form.ingredients.map((ing, idx) => (
+              <div key={idx} className="flex gap-2 relative">
+                <input
+                  required
+                  type="text"
+                  className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                  value={ing}
+                  onChange={e => updateIngredient(idx, e.target.value)}
+                  placeholder="例如：雞蛋 2顆"
+                />
+                <button type="button" onClick={() => removeIngredient(idx)} className="text-[#FF3B30] p-3 absolute right-2 top-1.5 hover:bg-red-50 rounded-full transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                 </button>
-                {expandedTagCategory === parent && (
-                  <div className="p-4 flex flex-wrap gap-2.5 bg-white/80 animate-in slide-in-from-top-2">
-                    {children.map((child: string) => (
-                      <button
-                        key={child}
-                        type="button"
-                        onClick={() => toggleTag(child)}
-                        className={`text-xs px-3.5 py-1.5 rounded-full border transition-all active:scale-95 font-bold tracking-wider ${form.tags.includes(child)
-                          ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.2)]'
-                          : 'bg-white text-slate-500 border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:border-blue-200 hover:text-[#007AFF]'
-                          }`}
-                      >
-                        {child}
-                      </button>
-                    ))}
-                    {children.length === 0 && <span className="text-[11px] text-slate-400 font-bold">無選項</span>}
-                  </div>
-                )}
               </div>
             ))}
+            {/* 新增食材按鈕：虛線膠囊 */}
+            <button type="button" onClick={addIngredient} className="w-full py-4 border-2 border-dashed border-white/60 rounded-full bg-white/80 text-slate-400 text-[15px] font-black tracking-wider hover:border-[#007AFF] hover:text-[#007AFF] hover:bg-white/80 transition-all active:scale-[0.98]">+ 新增食材</button>
           </div>
-        </div>
 
-        <div className="space-y-3 border-t border-white/60 pt-5">
-          <div className="flex justify-between items-center px-1">
-            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">食材準備區</label>
-            <span className="text-[10px] font-bold text-slate-400">合併輸入名稱與份量</span>
+          <div className="space-y-1.5 border-t border-white/60 pt-5">
+            <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理做法區</label>
+            <textarea
+              required
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              value={form.steps}
+              onChange={e => setForm({ ...form, steps: e.target.value })}
+              placeholder="AI 會自動分行，您也可以手動輸入。&#10;手動輸入配方份量無法縮放：&#10;1. 準備食材...&#10;2. 起油鍋..."
+            />
           </div>
-          {form.ingredients.map((ing, idx) => (
-            <div key={idx} className="flex gap-2 relative">
-              <input
-                required
-                type="text"
-                className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-                value={ing}
-                onChange={e => updateIngredient(idx, e.target.value)}
-                placeholder="例如：雞蛋 2顆"
-              />
-              <button type="button" onClick={() => removeIngredient(idx)} className="text-[#FF3B30] p-3 absolute right-2 top-1.5 hover:bg-red-50 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-              </button>
-            </div>
-          ))}
-          {/* 新增食材按鈕：虛線膠囊 */}
-          <button type="button" onClick={addIngredient} className="w-full py-4 border-2 border-dashed border-white/60 rounded-full bg-white/80 text-slate-400 text-[15px] font-black tracking-wider hover:border-[#007AFF] hover:text-[#007AFF] hover:bg-white/80 transition-all active:scale-[0.98]">+ 新增食材</button>
-        </div>
 
-        <div className="space-y-1.5 border-t border-white/60 pt-5">
-          <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理做法區</label>
-          <textarea
-            required
-            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-            value={form.steps}
-            onChange={e => setForm({ ...form, steps: e.target.value })}
-            placeholder="AI 會自動分行，您也可以手動輸入。&#10;手動輸入配方份量無法縮放：&#10;1. 準備食材...&#10;2. 起油鍋..."
-          />
-        </div>
+          <div className="space-y-1.5 border-t border-white/60 pt-5">
+            <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">料理心得 / 評價</label>
+            <textarea
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              value={form.review || ''}
+              onChange={e => setForm({ ...form, review: e.target.value })}
+              placeholder="記錄料理成功的小撇步、口味調整或家人評價..."
+            />
+          </div>
 
-        <div className="space-y-1.5 border-t border-white/60 pt-5">
-          <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">料理心得 / 評價</label>
-          <textarea
-            className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
-            value={form.review || ''}
-            onChange={e => setForm({ ...form, review: e.target.value })}
-            placeholder="記錄料理成功的小撇步、口味調整或家人評價..."
-          />
-        </div>
+          <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/60">
+            <button type="button" onClick={onCancel} className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest">
+              取消
+            </button>
 
-        <div className="grid grid-cols-2 gap-3 pt-6 border-t border-white/60">
-          <button type="button" onClick={onCancel} className="w-full bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 text-slate-500 font-black py-4 rounded-full border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] active:scale-[0.96] transition-all text-[15px] hover:bg-white tracking-widest">
-            取消
-          </button>
+            {/* 🍎 底部儲存按鈕：移除果凍感，回歸原廠扁平藍與柔光暈 */}
+            <button type="submit" className="w-full bg-[#007AFF] text-white font-black py-4 rounded-full shadow-[0_4px_12px_rgba(0,122,255,0.2)] active:scale-[0.96] transition-all text-[15px] tracking-widest border-none hover:bg-blue-600 flex items-center justify-center gap-2">
+              儲存食譜
+            </button>
+          </div>
+        </form>
 
-          {/* 🍎 底部儲存按鈕：移除果凍感，回歸原廠扁平藍與柔光暈 */}
-          <button type="submit" className="w-full bg-[#007AFF] text-white font-black py-4 rounded-full shadow-[0_4px_12px_rgba(0,122,255,0.2)] active:scale-[0.96] transition-all text-[15px] tracking-widest border-none hover:bg-blue-600 flex items-center justify-center gap-2">
-            儲存食譜
-          </button>
-        </div>
-      </form>
-
-      <ConfirmationModal
-        isOpen={modalConfig.isOpen}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        confirmText="確定"
-        isAlert={modalConfig.isAlert}
-        onConfirm={modalConfig.onConfirm}
-      />
+        <ConfirmationModal
+          isOpen={modalConfig.isOpen}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          confirmText="確定"
+          isAlert={modalConfig.isAlert}
+          onConfirm={modalConfig.onConfirm}
+        />
+      </div>
     </div>
   );
 };

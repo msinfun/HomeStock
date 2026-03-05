@@ -23,9 +23,15 @@ const InputModal: React.FC<InputModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setValue(defaultValue);
+      document.body.style.overflow = 'hidden';
       // Slight delay to ensure focus works after animation starts
       setTimeout(() => inputRef.current?.focus(), 100);
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen, defaultValue]);
 
   if (!isOpen) return null;

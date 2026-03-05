@@ -118,6 +118,19 @@ const RecipeCard: React.FC<{
     currentCost: string;
   }>({ isOpen: false, ingredientName: '', currentCost: '' });
 
+  // Body scroll lock effect
+  useEffect(() => {
+    const isModalOpen = isCookingMode || scaleEditModal || priceEditModal.isOpen;
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isCookingMode, scaleEditModal, priceEditModal.isOpen]);
+
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
@@ -385,7 +398,7 @@ const RecipeCard: React.FC<{
   if (isCookingMode) {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-slate-900 text-white flex flex-col animate-in slide-in-from-bottom duration-300"
+        className="fixed inset-0 z-[100] bg-slate-900 text-white flex flex-col h-[100dvh] animate-in slide-in-from-bottom duration-300"
         onTouchStart={handleCookTouchStart}
         onTouchEnd={handleCookTouchEnd}
       >
@@ -410,7 +423,7 @@ const RecipeCard: React.FC<{
           </p>
         </div>
 
-        <div className="flex-1 px-8 flex flex-col items-center justify-center overflow-hidden">
+        <div className="flex-1 px-8 flex flex-col items-center justify-center overflow-hidden overscroll-contain">
           {formattedSteps.length > 0 ? (
             <p className="text-[26px] sm:text-3xl font-black leading-snug tracking-tight text-center text-white/90 select-none">
               {formattedSteps[cookingStepIndex]}
@@ -895,6 +908,19 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
   useEffect(() => { localStorage.setItem('homestock_recipe_view', viewMode); }, [viewMode]);
 
+  // Body scroll lock effect
+  useEffect(() => {
+    const isModalOpen = isFilterOpen || typeof batchEditModal.type === 'string' || isViewMenuOpen || confirmConfig.isOpen;
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isFilterOpen, batchEditModal.type, isViewMenuOpen, confirmConfig.isOpen]);
+
   const tagCounts = useMemo(() => {
     const tCounts: Record<string, number> = {};
     const pCounts: Record<string, number> = {};
@@ -987,7 +1013,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
                   <h3 className="font-black tracking-tighter text-slate-900 text-base flex items-center gap-2">標籤篩選</h3>
                   {selectedTags.size > 0 && <button onClick={clearFilters} className="text-xs text-[#FF3B30] font-black hover:bg-red-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">清除 ({selectedTags.size})</button>}
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 custom-scrollbar">
                   {Object.entries(recipeTags).map(([parent, children]: [string, string[]]) => {
                     const isExpanded = expandedParentTag === parent;
                     const allSelected = children.length > 0 && children.every(c => selectedTags.has(c));
@@ -1086,14 +1112,14 @@ const RecipeView: React.FC<RecipeViewProps> = ({
       {/* 檢視設定彈窗 */}
       {isViewMenuOpen && (
         <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col h-[100dvh] sm:h-auto max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
               <button onClick={() => setIsViewMenuOpen(false)} className="p-2.5 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </button>
             </div>
-            <div className="p-6 space-y-8 overflow-y-auto">
+            <div className="p-6 space-y-8 overflow-y-auto overscroll-contain">
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest pl-1">顯示模式</p>
                 <div className="flex items-center justify-between bg-white px-5 py-4 rounded-3xl border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">

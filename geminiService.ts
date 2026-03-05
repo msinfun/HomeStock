@@ -4,7 +4,7 @@ import { Recipe, InventoryItem } from "./types";
 
 // --- API Key Helper ---
 function getGeminiClient(): GoogleGenAI {
-  const apiKey = localStorage.getItem('gemini_api_key') || process.env.API_KEY || "";
+  const apiKey = localStorage.getItem('gemini_api_key') || "";
   if (!apiKey) {
     throw new Error("Missing API Key. Please check Settings.");
   }
@@ -16,6 +16,11 @@ function handleApiError(error: any): Error {
   console.error("Gemini API Error:", error);
   const errString = (error?.message || error?.toString() || '').toLowerCase();
   const status = error?.status;
+
+  // 攔截本地端拋出的 Missing API Key 錯誤
+  if (errString.includes('missing api key')) {
+    return new Error("尚未設定 API Key！請先前往「設定 > AI 引擎設定」輸入您的金鑰。");
+  }
 
   if (status === 503 || status === 500 || errString.includes('503') || errString.includes('500') || errString.includes('unavailable') || errString.includes('overloaded') || errString.includes('internal')) {
     return new Error("伺服器目前忙碌中 (503/500)，請稍後再試。");
@@ -30,7 +35,9 @@ function handleApiError(error: any): Error {
     return new Error("API 金鑰無效或權限不足 (401/403)。");
   }
 
-  return new Error("AI 解析失敗，請確認圖片內容是否清晰，或手動輸入。");
+  // 替換掉原本最後的 return
+  const realErrorMsg = error?.message || error?.toString() || "未知錯誤";
+  return new Error(`AI 解析失敗 (${realErrorMsg})。請確認網路狀態或手動輸入。`);
 }
 
 // Helper to strictly validate and clean tags based on whitelist
@@ -43,7 +50,6 @@ function cleanTags(tags: string[], allowed: string[]): string[] {
   return tags.filter(t => allowedSet.has(t));
 }
 
-// 🍎 改為動態接收現有分類的函數
 const getCommonPromptRules = (categories: string[]) => {
   const catString = categories.length > 0 ? categories.join("', '") : "食品', '雜貨', '藥品', '盥洗用品', '電子產品', '其他";
   return `
@@ -55,18 +61,30 @@ const getCommonPromptRules = (categories: string[]) => {
   5. **price (單價)**：提取單價數字。如果發票或圖片上僅有「總價」與「數量」，請務必自行計算「總價 ÷ 數量 = 單價」並回傳此單價數字；若無價格則回傳 0。
   6. **expiryDate (有效期限)**：極度仔細尋找包裝上的效期 (EXP, Best Before)。若有找到，統一轉換為 YYYY-MM-DD 格式；若無則回傳空字串。
   7. **category (大分類)**：請務必優先從現有類別 ['${catString}'] 中挑選最適合的。
+  8. **防呆機制**：如果圖片模糊或缺少資訊，請進行合理推斷，**絕對不允許回傳 null**。若無法推斷，請填寫預設值 (字串填 "", 數字填 0)。
+  9. **單價防呆**：若無法取得 price，請強制回傳 0，不可省略該欄位。
 `;
 };
 
+
 const getRecipeStrictPrompt = (inventoryVocabulary: string = "") => `
   **[嚴格資料提取與標記規則 - 必讀]**
-  1. **份量智能標記 (AI Tagging)**：在 \`ingredients\` (食材清單) 與 \`steps\` (作法步驟) 中，只要遇到「需要隨份量縮放的食材數字」，一律使用 \`{{數字|單位}}\` 的格式標記。例如：\`{{60|g}}\`, \`{{1.5|大匙}}\`, \`{{2|顆}}\`。若無單位請標記為 \`{{2}}\`。
-  2. **絕對不標記**：溫度、時間、容器尺寸、攪拌次數等「不可縮放」的數字，絕對不要加上標記！例如保持「180度」、「28x28cm」、「烤15分鐘」。
-  3. **食材一致性**：食材清單請輸出如「高筋麵粉 {{280|g}}」的格式。
-  4. **動態食材名稱標準化 (Crucial)**：When outputting ingredients, strictly use the 'subCategory' name from the provided inventory list if available. DO NOT use the full 'name' (e.g., use '白芝麻' instead of '九鬼-深煎りいりごま 白芝麻'). If no subCategory exists, use a short generic name. 轉換後的名稱必須保留原有的 {{數值|單位}} 標記格式。
+  1. **份量智能標記 (強制執行)**：在 \`ingredients\` (食材) 與 \`steps\` (作法) 中，遇到需要縮放的食材數字，一律標記為 \`{{數字|單位}}\`。
+  
+  **[食材清單 (ingredients) 輸出範例 - 絕對遵守]**
+  ❌ 錯誤示範：["牛番茄 4顆", "洋蔥 1顆", "翅小腿 10根"]
+  ✅ 正確示範：["牛番茄 {{4|顆}}", "洋蔥 {{1|顆}}", "翅小腿 {{10|根}}"]
+  
+  **[作法步驟 (steps) 輸出範例 - 絕對遵守 (含食材變形與簡稱)]**
+  *注意：當食材在步驟中改變稱呼或狀態（如：牛番茄變為「番茄塊」、洋蔥變為「洋蔥丁」、翅小腿變為「雞翅」），仍必須精準對應並插入原來的份量標記！*
+  ❌ 錯誤示範：["加入洋蔥丁炒至焦黃色", "加入番茄塊炒至出水", "直接放入雞翅"] (漏掉標記)
+  ✅ 正確示範：["加入洋蔥丁 {{1|顆}} 炒至焦黃色", "加入番茄塊 {{4|顆}} 炒至出水", "直接放入雞翅 {{10|根}}"]
+  
+  2. **絕對不標記不可縮放數值**：溫度、時間、容器尺寸等，如「燉煮一小時」必須保持原樣。
+  3. **動態食材名稱標準化**：優先使用現有庫存目錄中的 \`subCategory\` 作為食材名稱。
      【使用者現有庫存目錄】：${inventoryVocabulary}
-  5. **做法內嵌數量**：在 steps 提到食材時務必帶入份量並標記，如「加入 高筋麵粉 {{280|g}}」。
-  6. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（例如：2）。
+  4. **做法內嵌數量自我檢查**：完成 \`steps\` 生成後，請務必自我檢查：步驟中提到的「所有食材」（包含變形、切塊、簡稱），是否都已帶入 \`{{數字|單位}}\` 格式。
+  5. **份量估算**：若無標示幾人份，請預估並回傳純數字給 \`servings\`（預設回傳 1 或 2）。
 `;
 
 const RECIPE_SCHEMA = {
@@ -139,6 +157,11 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
       - Total Weight: Sum of all ingredients in grams (g).
       - Nutrition: Based on Taiwan FDA standards.
       - Output JSON only.
+
+      **[STRICT JSON OUTPUT FORMAT]**
+      - Do NOT wrap the JSON in markdown code blocks.
+      - Ensure 'unitPrice' and 'cost' are always numbers (fallback to 0).
+      - Ensure 'source' is strictly either "inventory" or "ai".
     `;
 
     const response = await ai.models.generateContent({

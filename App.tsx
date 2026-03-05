@@ -417,14 +417,20 @@ const App: React.FC = () => {
         <div className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] rounded-full bg-purple-400/15 blur-[120px]"></div>
       </div>
 
-      <div className="relative z-10 w-full flex flex-col items-center">
+      <div className="relative w-full flex flex-col items-center">
         <header className="w-full max-w-2xl px-4 py-3 flex justify-between items-center bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 sticky top-0 z-40 border-b border-white shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)]">
           <div className="flex gap-2">
             <button onClick={() => setActiveView('analysis')} className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'analysis' ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'}`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
             </button>
             <button onClick={() => setActiveView('meal-planner')} className={`p-2.5 rounded-full transition-all active:scale-95 border ${activeView === 'meal-planner' ? 'bg-[#007AFF] text-white border-[#007AFF] shadow-[0_4px_12px_rgba(0,122,255,0.3)]' : 'bg-transparent text-slate-400 border-transparent hover:bg-white hover:border-white hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'}`} title="AI 廚房管家">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                <path d="M5 3v4" />
+                <path d="M19 17v4" />
+                <path d="M3 5h4" />
+                <path d="M17 19h4" />
+              </svg>
             </button>
           </div>
           <div className="flex gap-2">

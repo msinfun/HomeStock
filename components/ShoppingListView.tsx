@@ -120,6 +120,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   shoppingList, onRemove, onToggle, showAddQuickItem, onCloseAddQuickItem, onAddQuickItem, categories, existingItems
 }) => {
   const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
+  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
   const totalCount = shoppingList.length;
   const completedCount = shoppingList.filter(item => item.isChecked).length;
@@ -200,25 +201,25 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 快速新增彈窗 (Slide-up Modal) */}
       {showAddQuickItem && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60 flex flex-col h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col max-h-[90dvh] sm:max-h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
 
             {/* 標題與關閉按鈕 */}
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0 bg-white/80">
+            <div className="flex justify-between items-center p-6 shrink-0 bg-transparent">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">快速加入待買</h3>
               <button onClick={onCloseAddQuickItem} className="p-2.5 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-6 space-y-6 custom-scrollbar">
               {/* 搜尋輸入框 */}
               <div className="relative">
                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                 <input
                   autoFocus
                   type="text"
-                  className="w-full pl-11 pr-4 py-3.5 rounded-full bg-white border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                  className="w-full pl-11 pr-4 py-3.5 rounded-full bg-white border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[15px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-400 transition-all focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                   placeholder="搜尋物品..."
@@ -231,33 +232,47 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 />
               </div>
 
-
-
               {/* 物品卡片網格 */}
-              <div className="grid grid-cols-2 gap-3">
-                {filteredItems.map(name => (
-                  <button
-                    key={name}
-                    onClick={() => onAddQuickItem(name, '其他')}
-                    className="p-4 bg-white/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-left hover:border-[#007AFF]/30 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)] active:scale-95 transition-all group overflow-hidden"
-                  >
-                    <span className="block text-[15px] font-black text-slate-700 group-hover:text-[#007AFF] truncate">{name}</span>
-                    <span className="text-[10px] font-bold text-slate-400 mt-1 block tracking-widest">從歷史庫存記錄</span>
-                  </button>
-                ))}
-
-                {filteredItems.length === 0 && searchTerm.trim() && (
+              <div className="grid grid-cols-2 gap-3 pb-8">
+                {searchTerm.trim().length > 0 && (
                   <button
                     onClick={() => {
                       onAddQuickItem(searchTerm.trim(), '其他');
                       setSearchTerm('');
                     }}
-                    className="col-span-2 p-4 bg-blue-50/80 border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-center active:scale-95 transition-all hover:bg-blue-100 overflow-hidden"
+                    className="col-span-2 p-4 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] text-center active:scale-95 transition-all hover:bg-white/60 overflow-hidden"
                   >
-                    <span className="block text-[15px] font-black text-[#007AFF]">新增「{searchTerm}」</span>
-                    <span className="text-[10px] font-bold text-blue-400 mt-1 block tracking-widest">點擊手動加入清單</span>
+                    <span className="block text-[15px] font-black text-[#007AFF]">新增『{searchTerm.trim()}』</span>
                   </button>
                 )}
+
+                {filteredItems.map(name => {
+                  const alreadyAdded = recentlyAdded.has(name) || shoppingList.some(s => s.name === name);
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        if (!alreadyAdded) {
+                          onAddQuickItem(name, '其他');
+                          setRecentlyAdded(prev => new Set(prev).add(name));
+                        }
+                      }}
+                      className={`px-5 py-3 border shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-center active:scale-95 transition-all flex items-center justify-center gap-1.5 overflow-hidden ${alreadyAdded
+                        ? 'bg-green-50 text-[#34C759] border-transparent cursor-default'
+                        : 'bg-white/60 backdrop-blur-md border-white/60 hover:bg-white/80 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'
+                        }`}
+                    >
+                      {alreadyAdded ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                          <span className="text-[14px] font-black truncate">已加入</span>
+                        </>
+                      ) : (
+                        <span className="block text-[14.5px] font-black text-slate-700 truncate">{name}</span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

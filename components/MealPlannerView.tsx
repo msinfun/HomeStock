@@ -147,6 +147,18 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
         if (isManualAddOpen) setManualAddDate(selectedDate);
     }, [isManualAddOpen, selectedDate]);
 
+    // Lock body scroll when any modal is open
+    useEffect(() => {
+        if (isManualAddOpen || isAIPlanOpen || modalConfig.isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isManualAddOpen, isAIPlanOpen, modalConfig.isOpen]);
+
     const weekDates = useMemo(() => getWeekDates(selectedDate), [selectedDate]);
     const currentDayMeals = mealData[selectedDate] || { breakfast: [], lunch: [], dinner: [] };
 
@@ -258,8 +270,14 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             <p className="text-xs font-bold text-[#007AFF] tracking-widest">{selectedDate.replace(/-/g, ' / ')}</p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button onClick={() => setIsAIPlanOpen(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-transparent border-2 border-[#007AFF]/20 text-[#007AFF] hover:bg-blue-50 active:scale-95 transition-all shadow-sm">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
+                            <button onClick={() => setIsAIPlanOpen(true)} className="p-2 flex items-center justify-center text-[#007AFF] hover:scale-110 active:scale-95 transition-all shrink-0">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                                    <path d="M5 3v4" />
+                                    <path d="M19 17v4" />
+                                    <path d="M3 5h4" />
+                                    <path d="M17 19h4" />
+                                </svg>
                             </button>
                             <button onClick={() => setIsManualAddOpen(true)} className="w-10 h-10 rounded-full flex items-center justify-center bg-[#007AFF] text-white hover:bg-blue-600 active:scale-95 transition-all shadow-[0_4px_12px_rgba(0,122,255,0.3)]">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -372,16 +390,16 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* Manual Add Modal */}
             {isManualAddOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} onClick={() => setIsManualAddOpen(false)}>
-                    <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[80dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
+                    <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
-                            <h3 className="text-xl font-black tracking-tighter text-slate-900">新增一次餐食</h3>
+                            <h3 className="text-xl font-black tracking-tighter text-slate-900">新增餐食</h3>
                             <button onClick={() => setIsManualAddOpen(false)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 pb-40">
+                        <div className="p-6 overflow-y-auto overscroll-contain space-y-6 custom-scrollbar flex-1">
                             <div className="flex-1 min-w-0 overflow-hidden">
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">日期</label>
                                 <input type="date" value={manualAddDate} onChange={e => setManualAddDate(e.target.value)} className="w-full min-w-0 box-border appearance-none shrink-0 bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all" />
@@ -463,11 +481,17 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* AI Plan Modal */}
             {isAIPlanOpen && (
-                <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }} onClick={() => setIsAIPlanOpen(false)}>
-                    <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[80dvh] shadow-[0_-8px_40px_rgba(0,0,0,0.12)] animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
+                    <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" />
+                                    <path d="M5 3v4" />
+                                    <path d="M19 17v4" />
+                                    <path d="M3 5h4" />
+                                    <path d="M17 19h4" />
+                                </svg>
                                 AI 一鍵排程
                             </h3>
                             <button onClick={() => setIsAIPlanOpen(false)} className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-full transition-colors active:scale-95">
@@ -475,15 +499,15 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             </button>
                         </div>
 
-                        <div className="p-6 overflow-y-auto space-y-6 custom-scrollbar flex-1 pb-40">
+                        <div className="p-6 overflow-y-auto overscroll-contain space-y-6 custom-scrollbar flex-1">
                             <div>
                                 <p className="text-[13px] font-bold text-slate-500 mb-4 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
-                                    AI 將根據 <strong className="text-slate-800 tracking-widest">{selectedDate} 的餐食計畫</strong>，為您自動推薦適合的食譜餐點
+                                    將以 <strong className="text-slate-800 tracking-widest">{selectedDate}</strong> 所在當週為區間，規劃一週專屬餐食計畫。
                                 </p>
                                 <label className="block text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">客製化需求 (選填)</label>
                                 <textarea
                                     className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[15px] font-bold text-slate-800 placeholder:font-bold placeholder:text-slate-400 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none resize-none h-32 transition-all"
-                                    placeholder="有什麼特殊要求嗎？\n(例如：早餐盡量不要澱粉、午餐想要便當、這週想吃清淡一點...)"
+                                    placeholder="有什麼特殊要求嗎？(例如：早餐盡量不要澱粉、午餐想要便當、這週想吃清淡一點...)"
                                     value={mealPlanPrompt}
                                     onChange={e => setMealPlanPrompt(e.target.value)}
                                 />

@@ -182,6 +182,10 @@
       ```css
       bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)]
       ```
+    * **全螢幕深色遮罩 (Dark Modal Overlay)**：針對所有會蓋住底部 Navbar 的全螢幕彈窗（如 `InputModal`, `ConfirmationModal`, `AddItemView`, `AddRecipeView`），其最外層遮罩必須嚴格使用透視感極佳的深色毛玻璃，維持沉浸感與底層畫面的透視，**絕對禁止使用不透明純黑或刺眼純白背景**：
+      ```css
+      bg-slate-900/40 backdrop-blur-[40px]
+      ```
     * **輔助底板**：透明底層元件若需懸浮感，可搭配使用 `bg-white/40` 等級，但不可加上外框框線，維持融合度。
 
     ### C. 嚴格色彩系統與禁止事項 (Strict Color System & Prohibited Styles)
