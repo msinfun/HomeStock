@@ -147,6 +147,14 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
         if (isManualAddOpen) setManualAddDate(selectedDate);
     }, [isManualAddOpen, selectedDate]);
 
+    // Reset manual add state when modal closes
+    useEffect(() => {
+        if (!isManualAddOpen) {
+            setIsDropdownOpen(false);
+            setRecipeSearch('');
+        }
+    }, [isManualAddOpen]);
+
     // Lock body scroll when any modal is open
     useEffect(() => {
         if (isManualAddOpen || isAIPlanOpen || modalConfig.isOpen) {
@@ -454,7 +462,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                         className="w-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 placeholder:font-bold outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all"
                                     />
                                     {isDropdownOpen && (
-                                        <div className="absolute z-50 w-full mt-2 bg-white/95 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] max-h-48 overflow-y-auto custom-scrollbar">
+                                        <div className="absolute bottom-full mb-2 z-50 w-full bg-white/95 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] max-h-60 overflow-y-auto custom-scrollbar">
                                             {recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).length > 0 ? (
                                                 recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).map(r => (
                                                     <div key={r.id} onClick={() => { setManualAddRecipeId(r.id); setRecipeSearch(r.name); setIsDropdownOpen(false); }} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0">

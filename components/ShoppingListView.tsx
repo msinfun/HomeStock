@@ -120,7 +120,6 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
   shoppingList, onRemove, onToggle, showAddQuickItem, onCloseAddQuickItem, onAddQuickItem, categories, existingItems
 }) => {
   const [activeSwipeId, setActiveSwipeId] = useState<string | null>(null);
-  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
   const totalCount = shoppingList.length;
   const completedCount = shoppingList.filter(item => item.isChecked).length;
@@ -201,8 +200,8 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 快速新增彈窗 (Slide-up Modal) */}
       {showAddQuickItem && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col max-h-[90dvh] sm:max-h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] h-[100dvh] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col h-[85dvh] sm:h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
 
             {/* 標題與關閉按鈕 */}
             <div className="flex justify-between items-center p-6 shrink-0 bg-transparent">
@@ -247,22 +246,17 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                 )}
 
                 {filteredItems.map(name => {
-                  const alreadyAdded = recentlyAdded.has(name) || shoppingList.some(s => s.name === name);
+                  const isAdded = shoppingList.some(item => item.name === name);
                   return (
                     <button
                       key={name}
-                      onClick={() => {
-                        if (!alreadyAdded) {
-                          onAddQuickItem(name, '其他');
-                          setRecentlyAdded(prev => new Set(prev).add(name));
-                        }
-                      }}
-                      className={`px-5 py-3 border shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-center active:scale-95 transition-all flex items-center justify-center gap-1.5 overflow-hidden ${alreadyAdded
+                      onClick={isAdded ? undefined : () => onAddQuickItem(name, '其他')}
+                      className={`px-5 py-3 border shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-center active:scale-95 transition-all flex items-center justify-center gap-1.5 overflow-hidden ${isAdded
                         ? 'bg-green-50 text-[#34C759] border-transparent cursor-default'
                         : 'bg-white/60 backdrop-blur-md border-white/60 hover:bg-white/80 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'
                         }`}
                     >
-                      {alreadyAdded ? (
+                      {isAdded ? (
                         <>
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                           <span className="text-[14px] font-black truncate">已加入</span>

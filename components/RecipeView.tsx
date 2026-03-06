@@ -1111,9 +1111,9 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 檢視設定彈窗 */}
       {isViewMenuOpen && (
-        <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm rounded-[32px] mb-28 sm:mb-0 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col h-[100dvh] sm:h-auto max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 shrink-0">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsViewMenuOpen(false)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full max-w-sm rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 animate-in slide-in-from-bottom duration-200 flex flex-col h-auto max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-6 shrink-0 bg-transparent">
               <h3 className="text-xl font-black tracking-tighter text-slate-900">檢視設定</h3>
               <button onClick={() => setIsViewMenuOpen(false)} className="p-2.5 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full text-slate-500 hover:bg-slate-50 active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>

@@ -155,7 +155,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       </section>
 
       {/* 2. 即將過期 (Expiry Alerts) */}
-      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative">
+      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative flex flex-col h-auto">
         <div
           className="flex justify-between items-center mb-5 cursor-pointer group"
           onClick={() => setIsExpiryExpanded(!isExpiryExpanded)}
@@ -180,7 +180,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
             目前沒有即將過期的物品
           </div>
         ) : (
-          <ul className="space-y-3 pb-24">
+          <ul className="space-y-3">
             {displayedExpiryItems.map(item => (
               <li
                 key={item.id}
@@ -216,7 +216,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       </section>
 
       {/* 3. 建議補貨 (Replenishment Suggestions) */}
-      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative">
+      <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)] relative flex flex-col h-auto">
         <div
           className="flex justify-between items-center mb-5 cursor-pointer group"
           onClick={() => setIsRestockExpanded(!isRestockExpanded)}

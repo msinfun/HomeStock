@@ -23,6 +23,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const [batchQueue, setBatchQueue] = useState<any[]>([]);
   const [currentBatchIndex, setCurrentBatchIndex] = useState(0);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -211,7 +212,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       const nextIndex = currentBatchIndex + 1;
       setCurrentBatchIndex(nextIndex);
       loadItemIntoForm(batchQueue[nextIndex]);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setBatchQueue([]);
       setCurrentBatchIndex(0);
@@ -224,7 +225,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       const nextIndex = currentBatchIndex + 1;
       setCurrentBatchIndex(nextIndex);
       loadItemIntoForm(batchQueue[nextIndex]);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       setModalConfig({
         isOpen: true,
@@ -373,7 +374,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#F2F2F7] overflow-y-auto overscroll-contain h-[100dvh] custom-scrollbar animate-in slide-in-from-bottom duration-300">
+    <div ref={scrollContainerRef} className="fixed inset-0 z-[100] bg-[#F2F2F7] overflow-y-auto overscroll-contain h-[100dvh] custom-scrollbar animate-in slide-in-from-bottom duration-300">
 
       {/* Blurred Blob Background from Dashboard */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
