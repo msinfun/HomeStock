@@ -131,37 +131,17 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
     })).filter(i => i.price && i.price > 0);
 
     const prompt = `
-      You are a smart kitchen assistant. Calculate the estimated cost, total weight, and nutrition for this recipe.
+      Calculate estimated cost, weight, and nutrition.
       
       Recipe: ${recipe.name}
       Ingredients: ${JSON.stringify(recipe.ingredients)}
       Inventory Context: ${JSON.stringify(inventoryContext)}
 
-      **[Price Anchoring & Stability Rules - CRITICAL]**
-      1. **Target Market**: ALWAYS use prices from **Premium Supermarkets (e.g., Breeze Super, City'Super, or High-end Organic Stores)** as your base.
-      2. **Unit Consistency**:
-         - Premium Eggs: 12-15 TWD / piece.
-         - Organic Chicken Breast: 450-550 TWD / kg.
-         - Premium Milk: 100-120 TWD / 936ml.
-         - Flour: 80-120 TWD / kg.
-      3. **Vague Unit Standardization**: Convert vague terms to weight BEFORE cost calculation:
-         - "少許/適量 (Pinch/Some)" = 3g
-         - "一大匙 (Tablespoon)" = 15g/15ml
-         - "一小匙 (Teaspoon)" = 5g/5ml
-         - "一碗 (Bowl)" = 250g
-      4. **Logic Priority**:
-         - Priority 1: Use matching Inventory Context price.
-         - Priority 2: Use AI Premium Anchoring Prices.
-      
-      **[Calculations]**
-      - Total Weight: Sum of all ingredients in grams (g).
-      - Nutrition: Based on Taiwan FDA standards.
-      - Output JSON only.
-
-      **[STRICT JSON OUTPUT FORMAT]**
-      - Do NOT wrap the JSON in markdown code blocks.
-      - Ensure 'unitPrice' and 'cost' are always numbers (fallback to 0).
-      - Ensure 'source' is strictly either "inventory" or "ai".
+      **[Rules]**
+      1. Base prices on Premium Supermarkets.
+      2. Conversions: 少許/適量=3g, 一大匙=15g, 一小匙=5g, 一碗=250g.
+      3. Logic Priority: Inventory Context Price > AI Premium Price.
+      4. Output JSON only. 'source' must be "inventory" or "ai".
     `;
 
     const response = await ai.models.generateContent({
@@ -325,11 +305,14 @@ export async function recognizeRecipeFromText(text: string, availableTags: strin
     const tagList = availableTags.join(', ');
     const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
 
+    // 防禦：限制輸入長度並清洗可能的惡意指令
+    const safeText = text.slice(0, 3000).replace(/ignore all previous instructions/gi, '');
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: {
         parts: [{
-          text: `Extract recipe data from: ${text}. ${getRecipeStrictPrompt(inventoryVocabulary)}
+          text: `Extract recipe data from: ${safeText}. ${getRecipeStrictPrompt(inventoryVocabulary)}
             **[STRICT TAGGING RULES]**
             1. You must select tags ONLY from this specific list: [${tagList}].
             2. Do NOT invent, translate, or create new tags.
@@ -479,8 +462,21 @@ export async function generateMealPlan(userPrompt: string, recipes: Recipe[], ta
       }
     });
     let rawText = response.text || "null";
-    // 移除可能出現的 Markdown 標記
+    // 防禦性處理：若 responseSchema 失效，手動清洗 Markdown 標記
     rawText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(rawText);
+
+    const parsed = JSON.parse(rawText);
+
+    // 幻覺 ID 過濾機制：確保 AI 產生之食譜 ID 真實存在於資料庫中
+    const validIds = new Set(recipes.map(r => r.id));
+    if (parsed.plan && Array.isArray(parsed.plan)) {
+      parsed.plan.forEach((day: any) => {
+        if (Array.isArray(day.breakfast)) day.breakfast = day.breakfast.filter((id: string) => validIds.has(id));
+        if (Array.isArray(day.lunch)) day.lunch = day.lunch.filter((id: string) => validIds.has(id));
+        if (Array.isArray(day.dinner)) day.dinner = day.dinner.filter((id: string) => validIds.has(id));
+      });
+    }
+
+    return parsed;
   } catch (error) { throw handleApiError(error); }
 }

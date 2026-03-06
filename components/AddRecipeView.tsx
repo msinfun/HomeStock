@@ -14,9 +14,6 @@ interface AddRecipeViewProps {
 const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initialData, recipeTags, inventoryItems }) => {
   const [loading, setLoading] = useState(false);
   const [loadingMode, setLoadingMode] = useState<'scan' | 'youtube' | null>(null);
-  const [isTagLoading, setIsTagLoading] = useState(false);
-  const [isRecognizing, setIsRecognizing] = useState(false);
-  const [recognizeProgress, setRecognizeProgress] = useState(0);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
@@ -83,9 +80,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
     return tags.filter(t => availableFlatTags.includes(t));
   };
 
-  useEffect(() => {
-    if (initialData) setForm(initialData);
-  }, [initialData]);
+
 
   const handleScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -224,7 +219,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
 
   const handleNameBlur = async () => {
     if (!form.name.trim() || form.tags.length > 0) return;
-    setIsTagLoading(true);
     try {
       const result = await inferRecipeTagsFromTitle(form.name, availableFlatTags);
       if (result && result.tags && result.tags.length > 0) {
@@ -236,8 +230,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
       }
     } catch (error) {
       console.error("Tag inference failed", error);
-    } finally {
-      setIsTagLoading(false);
     }
   };
 
@@ -359,14 +351,14 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
 
         {/* URL Input Modal：升級為毛玻璃圓角 */}
         {showUrlInput && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => !loading && setShowUrlInput(false)}>
-            <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => !loading && setShowUrlInput(false)}>
+            <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">貼上內容</h3>
               <p className="text-sm text-slate-500 mb-6 font-bold text-center">AI 會自動分析文字食譜。</p>
               <textarea
                 autoFocus
                 disabled={loading}
-                className="w-full px-5 py-4 rounded-3xl bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/10 mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-3xl bg-white border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.03)] mb-6 resize-none h-32 text-[17px] font-bold text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 transition-all placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={urlOrText}
                 onChange={e => setUrlOrText(e.target.value)}
                 placeholder="貼上文字內容"
@@ -375,7 +367,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 <button
                   onClick={() => setShowUrlInput(false)}
                   disabled={loading}
-                  className="py-3.5 rounded-full font-black text-slate-500 bg-white border border-white shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:bg-slate-50 active:scale-[0.96] transition-all disabled:opacity-50 text-sm"
+                  className="py-3.5 rounded-full font-black text-slate-500 bg-white border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:bg-slate-50 active:scale-[0.96] transition-all disabled:opacity-50 text-sm"
                 >
                   取消
                 </button>
@@ -406,7 +398,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             <input
               required
               type="text"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
               onBlur={handleNameBlur}
@@ -419,7 +411,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             <input
               type="number"
               min="1"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.servings || ''}
               onChange={e => setForm({ ...form, servings: e.target.value ? parseInt(e.target.value) : undefined })}
               onWheel={e => e.currentTarget.blur()}
@@ -431,7 +423,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">來源連結</label>
             <input
               type="text"
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.sourceLink || ''}
               onChange={e => setForm({ ...form, sourceLink: e.target.value })}
               placeholder="https://..."
@@ -441,12 +433,6 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           <div className="space-y-2.5">
             <div className="flex items-center gap-2 px-1">
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase">智慧標籤 (Tags)</label>
-              {isTagLoading && (
-                <span className="flex items-center gap-1 text-[10px] text-[#007AFF] font-black tracking-widest animate-pulse">
-                  <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                  分析中...
-                </span>
-              )}
             </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
@@ -506,7 +492,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
                 <input
                   required
                   type="text"
-                  className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                  className="flex-1 px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                   value={ing}
                   onChange={e => updateIngredient(idx, e.target.value)}
                   placeholder="例如：雞蛋 2顆"
@@ -524,7 +510,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">料理做法區</label>
             <textarea
               required
-              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] min-h-[200px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.steps}
               onChange={e => setForm({ ...form, steps: e.target.value })}
               placeholder="AI 會自動分行，您也可以手動輸入。&#10;手動輸入配方份量無法縮放：&#10;1. 準備食材...&#10;2. 起油鍋..."
@@ -534,7 +520,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
           <div className="space-y-1.5 border-t border-white/60 pt-5">
             <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">料理心得 / 評價</label>
             <textarea
-              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] min-h-[100px] text-[17px] font-bold text-slate-800 leading-relaxed whitespace-pre-wrap placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={form.review || ''}
               onChange={e => setForm({ ...form, review: e.target.value })}
               placeholder="記錄料理成功的小撇步、口味調整或家人評價..."

@@ -466,7 +466,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <input
                 required
                 type="text"
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all pr-10 text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all pr-10 text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.name}
                 onChange={handleNameChange}
                 onBlur={handleNameBlur}
@@ -488,7 +488,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">數量</label>
               <input
                 type="number"
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.quantity === '' as any ? '' : form.quantity}
                 onChange={e => {
                   const val = e.target.value;
@@ -501,7 +501,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">安全庫存</label>
               <input
                 type="number"
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.minThreshold === '' as any ? '' : form.minThreshold}
                 onChange={e => {
                   const val = e.target.value;
@@ -518,7 +518,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">規格/容量</label>
               <input
                 type="text"
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.packageSize}
                 onChange={e => setForm({ ...form, packageSize: e.target.value })}
                 placeholder="如：500ml"
@@ -530,7 +530,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
                 <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
                 <input
                   type="number"
-                  className="w-full pl-9 pr-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                  className="w-full pl-9 pr-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                   value={form.price === '' as any ? '' : (form.price ?? '')}
                   onChange={e => {
                     const val = e.target.value;
@@ -548,7 +548,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">大分類 *</label>
               <select
                 required
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 transition-all appearance-none truncate text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 transition-all appearance-none truncate text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.2rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em`, paddingRight: `3rem` }}
                 value={form.category}
                 onChange={e => {
@@ -563,7 +563,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">小分類 (統計)</label>
               <input
                 type="text"
-                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-[#007AFF] transition-all text-[17px] placeholder:text-blue-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-[#007AFF] transition-all text-[17px] placeholder:text-blue-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.subCategory}
                 onChange={e => setForm({ ...form, subCategory: e.target.value })}
                 placeholder="如：鮮乳"
@@ -574,7 +574,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <div className="space-y-1.5">
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">存放位置</label>
             <select
-              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 transition-all appearance-none text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 transition-all appearance-none text-[17px] focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.2rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.2em 1.2em`, paddingRight: `3rem` }}
               value={form.location}
               onChange={e => {
@@ -611,7 +611,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               </div>
               <input
                 type="date"
-                className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.expiryDate}
                 onChange={e => setForm({ ...form, expiryDate: e.target.value })}
               />
@@ -629,7 +629,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               </div>
               <input
                 type="date"
-                className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/20 font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+                className="w-full min-w-0 appearance-none px-2 py-4 min-h-[56px] rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 transition-all text-[14px] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.openedDate}
                 onChange={e => setForm({ ...form, openedDate: e.target.value })}
               />
@@ -639,7 +639,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <div className="space-y-1.5">
             <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">其他備註</label>
             <textarea
-              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               rows={2}
               value={form.remarks}
               onChange={e => setForm({ ...form, remarks: e.target.value })}
@@ -650,7 +650,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           <div className="space-y-1.5">
             <label className="text-[11px] font-black tracking-widest text-[#007AFF] uppercase px-1">評價 / 心得</label>
             <textarea
-              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] -[#007AFF]/15 font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-3xl bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] font-bold text-slate-800 resize-none transition-all text-[17px] placeholder:font-normal placeholder:text-slate-300 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               rows={3}
               value={form.review}
               onChange={e => setForm({ ...form, review: e.target.value })}

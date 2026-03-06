@@ -58,6 +58,15 @@ const SettingsView: React.FC<SettingsViewProps> = ({
   const [editModal, setEditModal] = useState<{ isOpen: boolean; type: 'category' | 'location' | 'tag'; oldName: string; parent?: string }>({ isOpen: false, type: 'category', oldName: '' });
 
   useEffect(() => {
+    if (editModal.isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [editModal.isOpen]);
+
+  useEffect(() => {
     const savedKey = localStorage.getItem('gemini_api_key');
     if (savedKey) setApiKey(savedKey);
   }, []);
@@ -298,7 +307,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] p-6 flex items-center justify-between">
             <span className="text-[17px] text-slate-800 font-bold">提前幾天提醒？</span>
             <div className="relative w-28">
-              <input type="number" className="w-full px-5 py-3 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] -[#007AFF]/15 transition-all text-[17px] font-black text-[#007AFF] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={settings.expiryThresholdDays} onChange={(e) => onUpdateSettings({ ...settings, expiryThresholdDays: parseInt(e.target.value) || 0 })} />
+              <input type="number" className="w-full px-5 py-3 rounded-full bg-white/90 border border-white/60 shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] transition-all text-[17px] font-black text-[#007AFF] text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={settings.expiryThresholdDays} onChange={(e) => onUpdateSettings({ ...settings, expiryThresholdDays: parseInt(e.target.value) || 0 })} />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm pointer-events-none">天</span>
             </div>
           </div>

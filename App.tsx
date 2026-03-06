@@ -24,7 +24,6 @@ const DEFAULT_RECIPE_TAGS: RecipeTagStructure = {
 };
 
 const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2, 9);
-const normalizeForMatch = (str: string) => str.replace(/[()\[\]\s]/g, '').toLowerCase();
 
 // 虛擬身分證解析器
 const parseVirtualId = (virtualId: string) => {
@@ -162,15 +161,18 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('homestock_defs', JSON.stringify(defs));
-    localStorage.setItem('homestock_transactions', JSON.stringify(transactions));
-    localStorage.setItem('homestock_shopping', JSON.stringify(shoppingList));
-    localStorage.setItem('homestock_categories', JSON.stringify(categories));
-    localStorage.setItem('homestock_locations', JSON.stringify(locations));
-    localStorage.setItem('homestock_settings', JSON.stringify(settings));
-    localStorage.setItem('homestock_recipes', JSON.stringify(recipes));
-    localStorage.setItem('homestock_recipe_tags', JSON.stringify(recipeTags));
-    localStorage.setItem('homestock_meal_calendar', JSON.stringify(mealPlans));
+    const timer = setTimeout(() => {
+      localStorage.setItem('homestock_defs', JSON.stringify(defs));
+      localStorage.setItem('homestock_transactions', JSON.stringify(transactions));
+      localStorage.setItem('homestock_shopping', JSON.stringify(shoppingList));
+      localStorage.setItem('homestock_categories', JSON.stringify(categories));
+      localStorage.setItem('homestock_locations', JSON.stringify(locations));
+      localStorage.setItem('homestock_settings', JSON.stringify(settings));
+      localStorage.setItem('homestock_recipes', JSON.stringify(recipes));
+      localStorage.setItem('homestock_recipe_tags', JSON.stringify(recipeTags));
+      localStorage.setItem('homestock_meal_calendar', JSON.stringify(mealPlans));
+    }, 500);
+    return () => clearTimeout(timer);
   }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags, mealPlans]); // Global Initialization & Watchers
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -301,6 +303,7 @@ const App: React.FC = () => {
           if (remainingLogs.length > 0) {
             setTransactions(prev => prev.filter(t => !(t.defId === defId && (t.expiryDate || '無效期') === (expiryDate || '無效期'))));
           } else {
+            console.warn(`[LOGIC-04] 正在清除無交易紀錄的孤立物品定義:`, defs.find(d => d.id === defId)?.name || virtualId);
             setDefs(prev => prev.filter(d => d.id !== defId));
             setTransactions(prev => prev.filter(t => t.defId !== defId));
           }

@@ -136,7 +136,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
       {/* 1. 頂部統計卡片 (Overview Cards) - 保持完美的外部光學 */}
       <section className="grid grid-cols-2 gap-4">
         <div
-          className="bg-white/90 backdrop-blur-[40px] p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
+          className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('inventory')}
         >
           <span className="text-[40px] font-black tracking-tighter text-slate-800 group-hover:text-[#007AFF] transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)] leading-none">{items.length}</span>
@@ -144,7 +144,7 @@ const Dashboard: React.FC<DashboardProps> = ({ items, shoppingList, onSwitchView
         </div>
 
         <div
-          className="bg-white/90 backdrop-blur-[40px] p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
+          className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 p-6 rounded-[32px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] flex flex-col items-center justify-center text-center cursor-pointer hover:bg-white active:scale-[0.96] transition-all group relative overflow-hidden"
           onClick={() => onSwitchView('shopping')}
         >
           <span className={`text-[40px] font-black tracking-tighter transition-colors drop-shadow-[0_2px_10px_rgba(0,0,0,0.03)] leading-none ${outOfStockCount > 0 ? 'text-[#FF3B30]' : 'text-slate-800 group-hover:text-[#007AFF]'}`}>

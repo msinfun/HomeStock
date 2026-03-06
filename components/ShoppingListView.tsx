@@ -130,6 +130,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
     if (!showAddQuickItem) {
       setSearchTerm('');
     }
+
+    if (showAddQuickItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
   }, [showAddQuickItem]);
 
   const filteredItems = useMemo(() => {
@@ -187,7 +194,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 底部使用小撇步區塊 */}
       {shoppingList.length > 0 && (
-        <section className="bg-white/90 backdrop-blur-[40px] border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
+        <section className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-[32px] p-6 shadow-[0_2px_10px_rgba(0,0,0,0.03)]">
           <div className="flex gap-3.5 items-start">
             <div className="p-2.5 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.06),0_1px_2px_rgba(0,0,0,0.04),inset_0_1px_1px_rgba(255,255,255,1)] border border-white text-[#007AFF]">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
@@ -206,7 +213,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
       {/* 快速新增彈窗 (Slide-up Modal) */}
       {showAddQuickItem && (
-        <div className="fixed inset-0 z-[100] h-[100dvh] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
+        <div className="fixed inset-0 z-[200] h-[100dvh] flex items-end sm:items-center justify-center sm:p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={onCloseAddQuickItem}>
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 w-full sm:max-w-sm sm:rounded-[32px] rounded-t-[32px] overflow-hidden shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 flex flex-col h-[85dvh] sm:h-[85vh] animate-in slide-in-from-bottom duration-200" onClick={e => e.stopPropagation()}>
 
             {/* 標題與關閉按鈕 */}

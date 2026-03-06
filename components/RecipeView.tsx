@@ -1097,7 +1097,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
       {/* 批次修改標籤彈窗 */}
       {batchEditModal.type && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-6 text-center whitespace-nowrap">批次新增標籤</h3>
             <input autoFocus type="text" className="w-full px-5 py-4 rounded-full border border-white/60 bg-white/90 shadow-[0_2px_10px_rgba(0,0,0,0.03)] text-[17px] font-bold -[#007AFF]/15 mb-6 transition-all text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none" value={batchNewTag} onChange={e => setBatchNewTag(e.target.value)} placeholder="輸入要加入的標籤..." />

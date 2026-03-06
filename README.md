@@ -56,7 +56,7 @@
 ### E. 標籤清洗機制 (Tag Sanitization)
 為防止 AI 創造系統無法識別的篩選標籤，實作了 **雙重防護機制**：
 1.  **Prompt Injection**：將使用者在 `Settings` 定義的 `availableTags` 注入 Prompt，指令：「You must select tags ONLY from this specific list」。
-2.  **Code Filtering (`cleanTags`)**：AI 回傳後，前端執行 `cleanTags` 函式，比對白名單，**直接移除**任何不在清單內的標籤。
+2.  **Code Filtering (`filterInvalidTags`)**：AI 回傳後，前端執行 `filterInvalidTags` 函式，比對白名單，**直接移除**任何不在清單內的標籤。
 
 ### F. 錯誤攔截與優雅降級 (Error Handling)
 *   **全域攔截**：透過 `handleApiError` 統一處理。
@@ -231,6 +231,13 @@
 ---
 
 ## 6. 更新日誌 (Changelog)
+
+### [2026-03-06] 全域深度巡檢與 UI 真理標準化 (Deep Audit & Global Standardization)
+* **資料完整性防禦 (Data Integrity Safety)**：修復了 `App.tsx` 中的刪除批次卻意外毀滅整個物品的嚴重 Bug (BUG-06)；並為 `AddItemView` 與 `AddRecipeView` 修復了表單初始化的 Race Condition (BUG-03, BUG-A1)，確保高頻編輯時資料穩定。
+* **全域 Z-index 階層躍升 (Global Z-index Tiers)**：建立從 `z-50` 到 `z-[300]` 的鐵壁防護網，確保滿版 Drawer (`z-[200]`) 不再被 Navbar 遮擋，且危險警告彈窗具有全站絕對最高優先權。
+* **頂級玻色子體驗 (Ultra Glassmorphism Polish)**：全面整肅零星混亂的 UI。廢除舊版的 `backdrop-blur-md` 與失效參數；統一實裝 `bg-white/90 backdrop-blur-[40px] backdrop-saturate-150` 傳遞極致的現代透白玻璃質感；深色全螢幕遮罩也進化為高品質的 `bg-slate-900/40 backdrop-blur-[40px]`。
+* **iOS 無縫邊界修復 (Viewport Gap Fixes)**：滿版彈窗與 Drawer 徹底導入 `h-[100dvh]` 搭配 `fixed inset-0`，並配備 `body.style.overflow = 'hidden'` 的全域滾動鎖頭，根絕 iOS 底部 Home Indicator 與 Safari 工具列引起的底色溢出或漏光滾動災情。
+* **跨頁面與元件滾動修復 (Scrolling & Layout Bugs)**：徹底修復 Router 跳轉後的置頂失效，引入了事件驅動的 `window.scrollTo(0,0)` 重置機制；消除了 Dashboard 異常空白，並拔除了專案根目錄五金行般的殘留腳本，確保程式碼與文件一致完美。
 
 ### [2026-03-02] 架構躍升：AI 智能標記與究極縮放引擎上線
 * **核心技術演進**：徹底揚棄 Regex 黑白名單，改由 Prompt 實作 **AI 智慧標記 (AI Tagging)** (`{{數量|單位}}`)，完美避開諸如「180度」、「烤盤 28cm」等邊界數字的誤殺放大。

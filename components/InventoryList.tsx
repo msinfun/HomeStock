@@ -837,8 +837,8 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
       </div>
 
       {quickAdjust && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setQuickAdjust(null)}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setQuickAdjust(null)}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2 text-center">
               {quickAdjust.mode === 'add' ? '快速入庫' : '快速消耗'}
             </h3>
@@ -848,7 +848,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
             <input
               autoFocus
               type="number"
-              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold text-center -[#007AFF]/20 transition-all mb-6 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold text-center transition-all mb-6 focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               value={customDelta}
               onChange={e => setCustomDelta(e.target.value)}
               placeholder="數量"
@@ -875,14 +875,14 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
 
       {/* 🍎 批次修改升級為下拉選單 */}
       {batchEditModal.type && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
-          <div className="bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setBatchEditModal({ type: null })}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-6 text-center whitespace-nowrap">
               批次修改{batchEditModal.type === 'category' ? '分類' : '位置'}
             </h3>
 
             <select
-              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold -[#007AFF]/20 transition-all mb-6 appearance-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
+              className="w-full px-5 py-4 rounded-full border-none bg-white shadow-[inset_0_2px_8px_rgba(0,0,0,0.03)] text-[17px] font-bold transition-all mb-6 appearance-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
               style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
               value={batchTargetValue}
               onChange={e => setBatchTargetValue(e.target.value)}

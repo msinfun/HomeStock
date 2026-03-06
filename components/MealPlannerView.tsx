@@ -357,7 +357,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                             const mealIcon = meal === 'breakfast' ? '☀️' : meal === 'lunch' ? '🍔' : '🌙';
                             const targetIds = currentDayMeals[meal];
                             const hasRecipes = targetIds && targetIds.length > 0;
-                            const theme = meal === 'breakfast' ? { color: '#FF9F0A', bg: 'bg-[#FF9F0A]/10', border: 'border-[#FF9F0A]/20' } : meal === 'lunch' ? { color: '#34C759', bg: 'bg-[#34C759]/10', border: 'border-[#34C759]/20' } : { color: '#5856D6', bg: 'bg-[#5856D6]/10', border: 'border-[#5856D6]/20' };
+                            const theme = meal === 'breakfast' ? { color: '#007AFF', bg: 'bg-[#007AFF]/10', border: 'border-[#007AFF]/20' } : meal === 'lunch' ? { color: '#34C759', bg: 'bg-[#34C759]/10', border: 'border-[#34C759]/20' } : { color: '#5856D6', bg: 'bg-[#5856D6]/10', border: 'border-[#5856D6]/20' };
 
                             return (
                                 <div key={meal} className="w-full bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-3xl overflow-hidden p-4 animate-in slide-in-from-bottom-[8px] duration-500 fade-in fill-mode-both" style={{ animationDelay: `${meal === 'breakfast' ? 0 : meal === 'lunch' ? 100 : 200}ms` }}>
@@ -398,7 +398,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* Manual Add Modal */}
             {isManualAddOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
                     <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900">新增餐食</h3>
@@ -462,7 +462,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
                                         className="w-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-full px-5 py-3.5 text-[15px] font-bold text-slate-800 placeholder:font-bold outline-none focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] transition-all"
                                     />
                                     {isDropdownOpen && (
-                                        <div className="absolute bottom-full mb-2 z-50 w-full bg-white/95 backdrop-blur-xl border border-white/60 rounded-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] max-h-60 overflow-y-auto custom-scrollbar">
+                                        <div className="absolute bottom-full mb-2 z-50 w-full bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 border border-white/60 rounded-3xl shadow-[0_-4px_24px_rgba(0,0,0,0.08)] max-h-60 overflow-y-auto custom-scrollbar">
                                             {recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).length > 0 ? (
                                                 recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase())).map(r => (
                                                     <div key={r.id} onClick={() => { setManualAddRecipeId(r.id); setRecipeSearch(r.name); setIsDropdownOpen(false); }} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors border-b border-slate-50 last:border-0">
@@ -489,7 +489,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* AI Plan Modal */}
             {isAIPlanOpen && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
                     <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900 flex items-center gap-2">
