@@ -315,7 +315,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {categories.map((cat, idx) => (
-              <EditRow key={`cat-${idx}`} name={cat} onUp={() => moveCategory(idx, 'up')} onDown={() => moveCategory(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'category', oldName: cat })} onDelete={() => onUpdateCategories(categories.filter(c => c !== cat))} />
+              <EditRow key={`cat-${idx}`} name={cat} onUp={() => moveCategory(idx, 'up')} onDown={() => moveCategory(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'category', oldName: cat })} onDelete={() => {
+                setConfirmConfig({ isOpen: true, title: '刪除分類', message: `確定要刪除「${cat}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateCategories(categories.filter(c => c !== cat)); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+              }} />
             ))}
           </div>
           <p className="text-[11px] font-bold text-slate-400 px-4 text-center tracking-wide">修改名稱會自動更新所有關聯的物品卡片。</p>
@@ -332,7 +334,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {locations.map((loc, idx) => (
-              <EditRow key={`loc-${idx}`} name={loc} onUp={() => moveLocation(idx, 'up')} onDown={() => moveLocation(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'location', oldName: loc })} onDelete={() => onUpdateLocations(locations.filter(l => l !== loc))} />
+              <EditRow key={`loc-${idx}`} name={loc} onUp={() => moveLocation(idx, 'up')} onDown={() => moveLocation(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'location', oldName: loc })} onDelete={() => {
+                setConfirmConfig({ isOpen: true, title: '刪除位置', message: `確定要刪除「${loc}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateLocations(locations.filter(l => l !== loc)); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+              }} />
             ))}
           </div>
           <p className="text-[11px] font-bold text-slate-400 px-4 text-center tracking-wide">可使用右側上下箭頭調整選單排序。</p>
@@ -358,7 +362,9 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <div className="p-0">
                   {children.map((child, idx) => (
-                    <EditRow key={`tag-${parent}-${idx}`} name={child} onEdit={() => setEditModal({ isOpen: true, type: 'tag', oldName: child, parentTag: parent })} onDelete={() => { onUpdateRecipeTags({ ...recipeTags, [parent]: recipeTags[parent].filter(t => t !== child) }); }} />
+                    <EditRow key={`tag-${parent}-${idx}`} name={child} onEdit={() => setEditModal({ isOpen: true, type: 'tag', oldName: child, parentTag: parent })} onDelete={() => {
+                      setConfirmConfig({ isOpen: true, title: '刪除標籤', message: `確定要刪除「${child}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateRecipeTags({ ...recipeTags, [parent]: recipeTags[parent].filter(t => t !== child) }); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                    }} />
                   ))}
                   {children.length === 0 && <div className="py-6 text-center text-sm font-bold text-slate-400">目前無標籤</div>}
                 </div>
@@ -424,8 +430,8 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       />
 
       {pendingBackup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150">
-          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 overscroll-contain">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 overscroll-contain" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-black text-slate-900 mb-2 text-center tracking-tighter">選擇還原模式</h3>
             <p className="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">您選擇了一個備份檔案 ({new Date(pendingBackup.timestamp).toLocaleDateString()})。<br />請問您希望如何處理現有資料？</p>
             <div className="space-y-3">
