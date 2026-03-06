@@ -675,7 +675,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
+              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/80 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[200] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
                 <div className="flex justify-between items-center p-5 border-b border-white/60 shrink-0 bg-white/80">
                   <h3 className="font-black tracking-tighter text-slate-900 text-base flex items-center gap-2">
                     篩選條件
@@ -986,10 +986,10 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {consumeModal.isOpen && consumeModal.item && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setConsumeModal({ ...consumeModal, isOpen: false })}>
-          <div className="bg-white/95 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] border border-white/60 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] w-full max-w-sm p-8 animate-in zoom-in-95 duration-200 flex flex-col items-center" onClick={e => e.stopPropagation()}>
-            <h3 className="font-black tracking-tighter text-xl text-slate-900 mb-2">確認消耗</h3>
+      {consumeModal.isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 animate-in fade-in duration-200" onClick={() => setConsumeModal({ ...consumeModal, isOpen: false })}>
+          <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 overscroll-contain" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-black text-slate-900 mb-2 text-center tracking-tighter">記錄消耗</h3>
             <p className="text-sm font-bold text-slate-500 mb-2 text-center">請設定「{consumeModal.item.name}」消耗後的剩餘數量</p>
 
             <div className="flex items-center justify-center gap-4 my-6">

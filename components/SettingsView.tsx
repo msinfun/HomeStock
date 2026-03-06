@@ -430,7 +430,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       />
 
       {pendingBackup && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150" onClick={(e) => e.stopPropagation()}>
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] border border-white/60 w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 p-6 overscroll-contain" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-xl font-black text-slate-900 mb-2 text-center tracking-tighter">選擇還原模式</h3>
             <p className="text-sm font-bold text-slate-500 mb-6 leading-relaxed text-center">您選擇了一個備份檔案 ({new Date(pendingBackup.timestamp).toLocaleDateString()})。<br />請問您希望如何處理現有資料？</p>

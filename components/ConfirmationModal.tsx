@@ -33,8 +33,8 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   const modalContent = (
     <div
       /* 背景遮罩：深色毛玻璃，確保蓋住全站所有元素 */
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 transition-opacity p-4 animate-in fade-in duration-200"
-      onClick={isAlert && onConfirm ? onConfirm : undefined}
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-slate-900/40 backdrop-blur-[40px] backdrop-saturate-150 transition-opacity p-4 animate-in fade-in duration-200"
+      onClick={(e) => e.stopPropagation()}
     >
       <div
         /* 🍎 彈窗本體：頂級毛玻璃 + 32px 大圓角 */

@@ -15,6 +15,10 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
   const [loading, setLoading] = useState(false);
   const [loadingMode, setLoadingMode] = useState<'scan' | 'youtube' | null>(null);
   const [isTagLoading, setIsTagLoading] = useState(false);
+  const [isRecognizing, setIsRecognizing] = useState(false);
+  const [recognizeProgress, setRecognizeProgress] = useState(0);
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlOrText, setUrlOrText] = useState('');
@@ -49,6 +53,22 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
     sourceLink: '',
     review: ''
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setForm({ ...initialData });
+    } else {
+      setForm({ id: '', name: '', servings: 1, ingredients: [''], steps: '', tags: [], createdDate: new Date().toISOString(), sourceLink: '', review: '' });
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    const handleViewChange = () => {
+      scrollContainerRef.current?.scrollTo({ top: 0 });
+    };
+    window.addEventListener('view-changed', handleViewChange);
+    return () => window.removeEventListener('view-changed', handleViewChange);
+  }, []);
 
   // Flatten available child tags for AI prompting and validation
   const availableFlatTags = useMemo(() => {
@@ -258,7 +278,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#F2F2F7] overflow-y-auto overscroll-contain h-[100dvh] custom-scrollbar animate-in slide-in-from-bottom duration-300">
+    <div ref={scrollContainerRef} className="fixed inset-0 z-[100] bg-[#F2F2F7] overflow-y-auto overscroll-contain h-[100dvh] custom-scrollbar animate-in slide-in-from-bottom duration-300">
 
       {/* Blurred Blob Background from Dashboard */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">

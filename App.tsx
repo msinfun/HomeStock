@@ -171,9 +171,11 @@ const App: React.FC = () => {
     localStorage.setItem('homestock_recipes', JSON.stringify(recipes));
     localStorage.setItem('homestock_recipe_tags', JSON.stringify(recipeTags));
     localStorage.setItem('homestock_meal_calendar', JSON.stringify(mealPlans));
-  }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags, mealPlans]);
-
-  useEffect(() => { window.scrollTo(0, 0); }, [activeView]);
+  }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags, mealPlans]); // Global Initialization & Watchers
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('view-changed'));
+  }, [activeView]);
 
   const items: InventoryItem[] = useMemo(() => {
     const virtualItems: InventoryItem[] = [];
@@ -295,8 +297,13 @@ const App: React.FC = () => {
             id: generateId(), defId, type: 'adjust', delta: -currentQty, timestamp: new Date().toISOString(), expiryDate: expiryDate === '無效期' ? undefined : expiryDate
           }]);
         } else {
-          setDefs(prev => prev.filter(d => d.id !== defId));
-          setTransactions(prev => prev.filter(t => t.defId !== defId));
+          const remainingLogs = itemLogs.filter(t => (t.expiryDate || '無效期') !== (expiryDate || '無效期'));
+          if (remainingLogs.length > 0) {
+            setTransactions(prev => prev.filter(t => !(t.defId === defId && (t.expiryDate || '無效期') === (expiryDate || '無效期'))));
+          } else {
+            setDefs(prev => prev.filter(d => d.id !== defId));
+            setTransactions(prev => prev.filter(t => t.defId !== defId));
+          }
         }
         setModalConfig(prev => ({ ...prev, isOpen: false }));
       }

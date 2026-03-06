@@ -126,6 +126,12 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
 
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    if (!showAddQuickItem) {
+      setSearchTerm('');
+    }
+  }, [showAddQuickItem]);
+
   const filteredItems = useMemo(() => {
     const historyNames = Array.from(new Set(existingItems.map(i => (i as any).name || i.name))) as string[];
 
@@ -239,7 +245,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                       onAddQuickItem(searchTerm.trim(), '其他');
                       setSearchTerm('');
                     }}
-                    className="col-span-2 p-4 bg-white/40 backdrop-blur-md border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] text-center active:scale-95 transition-all hover:bg-white/60 overflow-hidden"
+                    className="col-span-2 p-4 bg-white/40 backdrop-blur-[40px] border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] rounded-[24px] text-center active:scale-95 transition-all hover:bg-white/60 overflow-hidden"
                   >
                     <span className="block text-[15px] font-black text-[#007AFF]">新增『{searchTerm.trim()}』</span>
                   </button>
@@ -253,13 +259,13 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({
                       onClick={isAdded ? undefined : () => onAddQuickItem(name, '其他')}
                       className={`px-5 py-3 border shadow-[0_2px_8px_rgba(0,0,0,0.02)] rounded-full text-center active:scale-95 transition-all flex items-center justify-center gap-1.5 overflow-hidden ${isAdded
                         ? 'bg-green-50 text-[#34C759] border-transparent cursor-default'
-                        : 'bg-white/60 backdrop-blur-md border-white/60 hover:bg-white/80 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'
+                        : 'bg-white/60 backdrop-blur-[40px] border-white/60 hover:bg-white/80 hover:shadow-[0_2px_10px_rgba(0,0,0,0.03)]'
                         }`}
                     >
                       {isAdded ? (
                         <>
                           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                          <span className="text-[14px] font-black truncate">已加入</span>
+                          <span className="text-[14px] font-black truncate">{name} <span className="opacity-80 text-[10px]">(已加入)</span></span>
                         </>
                       ) : (
                         <span className="block text-[14.5px] font-black text-slate-700 truncate">{name}</span>

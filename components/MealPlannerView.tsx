@@ -398,7 +398,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* Manual Add Modal */}
             {isManualAddOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsManualAddOpen(false)}>
                     <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900">新增餐食</h3>
@@ -489,7 +489,7 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
 
             {/* AI Plan Modal */}
             {isAIPlanOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[40px] animate-in fade-in duration-200" onClick={() => setIsAIPlanOpen(false)}>
                     <div className="bg-white/95 rounded-[32px] overflow-hidden flex flex-col w-full max-w-sm max-h-[85vh] shadow-[0_24px_48px_rgba(0,0,0,0.06)] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                             <h3 className="text-xl font-black tracking-tighter text-slate-900 flex items-center gap-2">

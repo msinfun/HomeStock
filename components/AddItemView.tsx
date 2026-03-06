@@ -26,6 +26,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasInitialized = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -85,7 +86,16 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   }, [categories, locations, existingItems]);
 
   useEffect(() => {
-    if (initialData) {
+    const handleViewChange = () => {
+      scrollContainerRef.current?.scrollTo({ top: 0 });
+    };
+    window.addEventListener('view-changed', handleViewChange);
+    return () => window.removeEventListener('view-changed', handleViewChange);
+  }, []);
+
+  useEffect(() => {
+    if (initialData && !hasInitialized.current) {
+      hasInitialized.current = true;
       const { id, ...data } = initialData;
       const validCategory = categories.includes(data.category) ? data.category : defaultCategory;
       const validLocation = data.location && locations.includes(data.location) ? data.location : '';

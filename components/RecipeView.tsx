@@ -1008,7 +1008,7 @@ const RecipeView: React.FC<RecipeViewProps> = ({
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[100] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
+              <div className="absolute top-full left-0 right-0 w-full mt-3 bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 shadow-[0_24px_48px_rgba(0,0,0,0.06),inset_0_2px_2px_rgba(255,255,255,1)] rounded-[32px] z-[200] border border-white/60 animate-in slide-in-from-top-2 duration-200 flex flex-col max-h-[60vh] overflow-hidden">
                 <div className="flex justify-between items-center p-5 border-b border-slate-100 shrink-0">
                   <h3 className="font-black tracking-tighter text-slate-900 text-base flex items-center gap-2">標籤篩選</h3>
                   {selectedTags.size > 0 && <button onClick={clearFilters} className="text-xs text-[#FF3B30] font-black hover:bg-red-50 px-3 py-1.5 rounded-full active:scale-95 transition-all">清除 ({selectedTags.size})</button>}
