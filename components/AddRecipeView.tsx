@@ -21,6 +21,14 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
   const [urlOrText, setUrlOrText] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMounted = useRef(true); // 🍎 QA-06
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   // Tag Selection State
   const [expandedTagCategory, setExpandedTagCategory] = useState<string | null>(null);
@@ -119,6 +127,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
       );
 
       const result = await recognizeRecipeFromImage(base64Images, availableFlatTags, inventoryItems || []);
+      if (!isMounted.current) return; // 🍎 QA-06
 
       if (result && result.name) {
         // Strict Filtering
@@ -143,6 +152,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         });
       }
     } catch (innerError: any) {
+      if (!isMounted.current) return;
       console.error(innerError);
       setModalConfig({
         isOpen: true,
@@ -152,9 +162,11 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
       });
     } finally {
-      setLoading(false);
-      setLoadingMode(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (isMounted.current) {
+        setLoading(false);
+        setLoadingMode(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -167,6 +179,8 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
     try {
       // Pass available tags to AI
       const result = await recognizeRecipeFromText(urlOrText, availableFlatTags, inventoryItems || []);
+      if (!isMounted.current) return; // 🍎 QA-06
+
       if (result) {
         // Strict Filtering
         const validTags = filterInvalidTags(result.tags);
@@ -203,6 +217,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         });
       }
     } catch (error: any) {
+      if (!isMounted.current) return;
       console.error(error);
       setModalConfig({
         isOpen: true,
@@ -212,8 +227,10 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
         onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
       });
     } finally {
-      setLoading(false);
-      setLoadingMode(null);
+      if (isMounted.current) {
+        setLoading(false);
+        setLoadingMode(null);
+      }
     }
   };
 

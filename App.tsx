@@ -249,10 +249,31 @@ const App: React.FC = () => {
     setShoppingList(prev => prev.map(s => s.category === oldName ? { ...s, category: newName } : s));
   };
 
+  const handleDeleteCategory = (category: string) => {
+    setCategories(prev => {
+      const next = prev.filter(c => c !== category);
+      const fallback = next.length > 0 ? next[0] : '未分類';
+      // 🍎 QA-07: 孤兒資料防護，同步將物品移至第一個分類
+      setDefs(dPrev => dPrev.map(d => d.category === category ? { ...d, category: fallback } : d));
+      setShoppingList(sPrev => sPrev.map(s => s.category === category ? { ...s, category: fallback } : s));
+      return next;
+    });
+  };
+
   const handleRenameLocation = (oldName: string, newName: string) => {
     if (!newName.trim() || oldName === newName) return;
     setLocations(prev => prev.map(l => l === oldName ? newName : l));
     setDefs(prev => prev.map(d => d.defaultLocation === oldName ? { ...d, defaultLocation: newName } : d));
+  };
+
+  const handleDeleteLocation = (location: string) => {
+    setLocations(prev => {
+      const next = prev.filter(l => l !== location);
+      const fallback = next.length > 0 ? next[0] : '未設定';
+      // 🍎 QA-07
+      setDefs(dPrev => dPrev.map(d => d.defaultLocation === location ? { ...d, defaultLocation: fallback } : d));
+      return next;
+    });
   };
 
   const handleRenameRecipeTag = (parent: string, oldChild: string, newChild: string) => {
@@ -264,6 +285,23 @@ const App: React.FC = () => {
     setRecipes(prev => prev.map(r => ({
       ...r,
       tags: r.tags.map(t => t === oldChild ? newChild : t)
+    })));
+  };
+
+  const handleDeleteRecipeTag = (parent: string, child: string) => {
+    setRecipeTags(prev => {
+      const next = { ...prev };
+      if (child) {
+        next[parent] = next[parent].filter(t => t !== child);
+      } else {
+        delete next[parent]; // parent flag
+      }
+      return next;
+    });
+    // 🍎 QA-08: 清除該被刪除的標籤
+    setRecipes(prev => prev.map(r => ({
+      ...r,
+      tags: r.tags.filter(t => child ? t !== child : !recipeTags[parent].includes(t)) // if parent deleted, remove all its children
     })));
   };
 
@@ -465,9 +503,9 @@ const App: React.FC = () => {
           {activeView === 'settings' && (
             <SettingsView
               settings={settings} onUpdateSettings={setSettings}
-              categories={categories} onUpdateCategories={setCategories} onRenameCategory={handleRenameCategory}
-              locations={locations} onUpdateLocations={setLocations} onRenameLocation={handleRenameLocation}
-              recipeTags={recipeTags} onUpdateRecipeTags={setRecipeTags} onRenameRecipeTag={handleRenameRecipeTag}
+              categories={categories} onUpdateCategories={setCategories} onRenameCategory={handleRenameCategory} onDeleteCategoryHook={handleDeleteCategory}
+              locations={locations} onUpdateLocations={setLocations} onRenameLocation={handleRenameLocation} onDeleteLocationHook={handleDeleteLocation}
+              recipeTags={recipeTags} onUpdateRecipeTags={setRecipeTags} onRenameRecipeTag={handleRenameRecipeTag} onDeleteRecipeTagHook={handleDeleteRecipeTag}
               mealPlans={mealPlans}
               onBack={() => setActiveView('dashboard')}
               items={items} defs={defs} transactions={transactions} recipes={recipes} shoppingList={shoppingList}

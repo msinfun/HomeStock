@@ -27,9 +27,12 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitialized = useRef(false);
+  const isMounted = useRef(true); // 🍎 QA-06 防禦：追蹤元件是否卸載
 
   useEffect(() => {
+    isMounted.current = true;
     return () => {
+      isMounted.current = false;
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (expiryTimeoutRef.current) clearTimeout(expiryTimeoutRef.current);
     };
@@ -186,6 +189,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     setIsTextAiLoading(true);
     try {
       const aiResult = await inferItemDetailsFromText(form.name, aiContext);
+      if (!isMounted.current) return; // 🍎 QA-06 解除掛載保護
+
       if (aiResult) {
         const aiCategory = categories.includes(aiResult.category) ? aiResult.category : form.category;
         const aiLocation = locations.includes(aiResult.location) ? aiResult.location : (form.location || predictLocation(aiResult.name || form.name));
@@ -204,15 +209,18 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         if (aiResult.location) setHasManuallySetLocation(true);
       }
     } catch (error) {
+      if (!isMounted.current) return;
       console.error("Text inference failed", error);
     } finally {
-      setIsTextAiLoading(false);
+      if (isMounted.current) setIsTextAiLoading(false);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.category) return;
+    if (form.quantity < 0 || form.minThreshold < 0) return; // 🍎 QA-01 防護：拒絕存入負數
+
     const isBatchMode = batchQueue.length > 0;
     const hasNextItem = currentBatchIndex < batchQueue.length - 1;
 
@@ -286,6 +294,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       try {
         const base64Images = await Promise.all(promises);
         const results = await recognizeItemFromImage(base64Images, aiContext);
+        if (!isMounted.current) return; // 🍎 QA-06
 
         if (results && results.length > 0) {
           if (results.length === 1) {
@@ -309,6 +318,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           });
         }
       } catch (err: any) {
+        if (!isMounted.current) return;
         console.error("Image AI failed", err);
         setModalConfig({
           isOpen: true,
@@ -320,8 +330,10 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           onCancel: () => { }
         });
       } finally {
-        setIsAiLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
+        if (isMounted.current) {
+          setIsAiLoading(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
       }
     }, 50);
   };
@@ -338,6 +350,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
         try {
           const base64 = (reader.result as string).split(',')[1];
           const expiry = await recognizeExpiryDate(base64);
+          if (!isMounted.current) return; // 🍎 QA-06
+
           if (expiry !== null) {
             setForm(prev => ({ ...prev, expiryDate: expiry }));
           } else {
@@ -352,6 +366,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             });
           }
         } catch (err: any) {
+          if (!isMounted.current) return;
           console.error("Expiry AI failed", err);
           setModalConfig({
             isOpen: true,
@@ -363,8 +378,10 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
             onCancel: () => { }
           });
         } finally {
-          setIsExpiryAiLoading(false);
-          if (expiryFileInputRef.current) expiryFileInputRef.current.value = '';
+          if (isMounted.current) {
+            setIsExpiryAiLoading(false);
+            if (expiryFileInputRef.current) expiryFileInputRef.current.value = '';
+          }
         }
       };
       reader.readAsDataURL(file);
@@ -466,6 +483,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <input
                 required
                 type="text"
+                maxLength={64}
                 className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all pr-10 text-[17px] font-bold text-slate-800 placeholder:text-slate-300 placeholder:font-normal focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.name}
                 onChange={handleNameChange}
@@ -488,6 +506,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">數量</label>
               <input
                 type="number"
+                min="0"
+                max="99999"
                 className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.quantity === '' as any ? '' : form.quantity}
                 onChange={e => {
@@ -501,6 +521,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
               <label className="text-[11px] font-black tracking-widest text-slate-400 uppercase px-1">安全庫存</label>
               <input
                 type="number"
+                min="0"
+                max="99999"
                 className="w-full px-5 py-4 rounded-full bg-white/90 border border-white/60 shadow-[0_2px_10px_rgba(0,0,0,0.03)] transition-all text-[17px] font-bold text-slate-800 placeholder:font-normal placeholder:text-slate-300 text-center focus:ring-4 focus:ring-[#007AFF]/15 focus:border-[#007AFF] outline-none"
                 value={form.minThreshold === '' as any ? '' : form.minThreshold}
                 onChange={e => {
@@ -615,6 +637,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
                 value={form.expiryDate}
                 onChange={e => setForm({ ...form, expiryDate: e.target.value })}
               />
+              {/* 🍎 QA-05 防護：過期溫和提示 */}
+              {form.expiryDate && form.expiryDate < new Date().toISOString().split('T')[0] && (
+                <div className="absolute mt-1 text-[11px] font-black text-[#FF3B30] flex items-center gap-1 animate-in fade-in slide-in-from-top-1 px-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+                  此日期已過期
+                </div>
+              )}
             </div>
             <div className="space-y-1.5 min-w-0">
               <div className="flex justify-between items-center mb-1 px-1">

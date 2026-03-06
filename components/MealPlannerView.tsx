@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Recipe, InventoryItem, DailyMeals, MealPlan } from '../types';
 import { recommendRecipes, generateMealPlan } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
@@ -142,6 +142,15 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
     const [isPlanning, setIsPlanning] = useState(false);
     const [mealPlanPrompt, setMealPlanPrompt] = useState('');
 
+    const isMounted = useRef(true); // 🍎 QA-06
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => {
+            isMounted.current = false;
+        };
+    }, []);
+
     // Sync manual add date with selected date when opening modal
     useEffect(() => {
         if (isManualAddOpen) setManualAddDate(selectedDate);
@@ -174,14 +183,16 @@ const MealPlannerView: React.FC<MealPlannerViewProps> = ({ recipes, inventoryIte
         setIsRecommending(true);
         try {
             const res = await recommendRecipes(inventoryItems || [], recipes);
+            if (!isMounted.current) return; // 🍎 QA-06
             setRecommendations(res);
         } catch (error: any) {
+            if (!isMounted.current) return;
             setModalConfig({
                 isOpen: true, title: '推薦失敗', message: error instanceof Error ? error.message : '發生未知的錯誤', isAlert: true, onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false }))
             });
             setRecommendations(null);
         } finally {
-            setIsRecommending(false);
+            if (isMounted.current) setIsRecommending(false);
         }
     };
 

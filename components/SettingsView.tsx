@@ -55,7 +55,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
 
   // Modals
   const [confirmConfig, setConfirmConfig] = useState<{ isOpen: boolean; title: string; message: string; confirmText?: string; cancelText?: string; isAlert?: boolean; onConfirm: () => void; }>({ isOpen: false, title: '', message: '', onConfirm: () => { } });
-  const [editModal, setEditModal] = useState<{ isOpen: boolean; type: 'category' | 'location' | 'tag'; oldName: string; parent?: string }>({ isOpen: false, type: 'category', oldName: '' });
+  const [editModal, setEditModal] = useState<{ isOpen: boolean; type: 'category' | 'location' | 'tag'; oldName: string; parentTag?: string }>({ isOpen: false, type: 'category', oldName: '' });
 
   useEffect(() => {
     if (editModal.isOpen) {
@@ -325,7 +325,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {categories.map((cat, idx) => (
               <EditRow key={`cat-${idx}`} name={cat} onUp={() => moveCategory(idx, 'up')} onDown={() => moveCategory(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'category', oldName: cat })} onDelete={() => {
-                setConfirmConfig({ isOpen: true, title: '刪除分類', message: `確定要刪除「${cat}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateCategories(categories.filter(c => c !== cat)); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                setConfirmConfig({ isOpen: true, title: '刪除分類', message: `確定要刪除「${cat}」嗎？`, confirmText: '刪除', onConfirm: () => { onDeleteCategoryHook(cat); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
               }} />
             ))}
           </div>
@@ -344,7 +344,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="bg-white/90 backdrop-blur-[40px] backdrop-saturate-150 rounded-[32px] overflow-hidden shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-white/60">
             {locations.map((loc, idx) => (
               <EditRow key={`loc-${idx}`} name={loc} onUp={() => moveLocation(idx, 'up')} onDown={() => moveLocation(idx, 'down')} onEdit={() => setEditModal({ isOpen: true, type: 'location', oldName: loc })} onDelete={() => {
-                setConfirmConfig({ isOpen: true, title: '刪除位置', message: `確定要刪除「${loc}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateLocations(locations.filter(l => l !== loc)); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                setConfirmConfig({ isOpen: true, title: '刪除位置', message: `確定要刪除「${loc}」嗎？`, confirmText: '刪除', onConfirm: () => { onDeleteLocationHook(loc); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
               }} />
             ))}
           </div>
@@ -366,13 +366,13 @@ const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="bg-transparent px-5 py-4 flex justify-between items-center border-b border-white/60">
                   <h4 className="font-black text-slate-800 text-[17px] tracking-tight">{parent}</h4>
                   <button onClick={() => {
-                    setConfirmConfig({ isOpen: true, title: '刪除群組', message: `確定刪除「${parent}」及其所有標籤嗎？`, confirmText: '刪除', onConfirm: () => { const next = { ...recipeTags }; delete next[parent]; onUpdateRecipeTags(next); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                    setConfirmConfig({ isOpen: true, title: '刪除群組', message: `確定刪除「${parent}」及其所有標籤嗎？`, confirmText: '刪除', onConfirm: () => { onDeleteRecipeTagHook(parent, ''); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
                   }} className="text-[#FF3B30] text-[11px] tracking-widest font-black px-3 py-1.5 bg-red-50 rounded-full">刪除群組</button>
                 </div>
                 <div className="p-0">
                   {children.map((child, idx) => (
                     <EditRow key={`tag-${parent}-${idx}`} name={child} onEdit={() => setEditModal({ isOpen: true, type: 'tag', oldName: child, parentTag: parent })} onDelete={() => {
-                      setConfirmConfig({ isOpen: true, title: '刪除標籤', message: `確定要刪除「${child}」嗎？`, confirmText: '刪除', onConfirm: () => { onUpdateRecipeTags({ ...recipeTags, [parent]: recipeTags[parent].filter(t => t !== child) }); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
+                      setConfirmConfig({ isOpen: true, title: '刪除標籤', message: `確定要刪除「${child}」嗎？`, confirmText: '刪除', onConfirm: () => { onDeleteRecipeTagHook(parent, child); setConfirmConfig(prev => ({ ...prev, isOpen: false })); } });
                     }} />
                   ))}
                   {children.length === 0 && <div className="py-6 text-center text-sm font-bold text-slate-400">目前無標籤</div>}
