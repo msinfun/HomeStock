@@ -216,6 +216,18 @@
     * **正常內文 (Content)**：維持 `text-[15px]` 或 `text-[17px]` 搭配 `font-bold`。
     * **輔助標籤 (Labels/Badges)**：全域統一使用 `text-[11px] font-black tracking-widest uppercase text-slate-400`。
 
+    ### F. 全域 Z-index 階層規範 (Global Z-index Hierarchy)
+    為徹底解決 UI 覆蓋衝突與 Navbar 遮擋問題，全站元件必須嚴格遵守以下 `z-index` 拔高分層標準：
+    * **`z-50` (底部導覽)**：`Navbar` 專用。
+    * **`z-[60]` (浮動操作)**：各頁面的 FAB (Floating Action Button)。
+    * **`z-[100]` (獨立滿版頁面)**：如 `AddItemView`, `AddRecipeView`。完整覆蓋於主畫面與 Navbar 之上。
+    * **`z-[200]` (滿版抽屜/操作彈窗)**：如 `InventoryList` 的篩選、`MealPlannerView` 的新增餐食彈窗、`ShoppingListView` 的快速加入待買。確保能蓋住滿版頁面與 Navbar。
+    * **`z-[300]` (最高層級警告/輸入對話框)**：如 `ConfirmationModal`, `InputModal`。必須絕對凌駕於所有畫面之上，防止被底層表單或 Drawer 遮擋導致操作卡死。
+
+    ### G. 彈窗與全螢幕視圖防護機制 (Modal & Viewport Protections)
+    * **防背景滾動穿透 (Body Scroll Lock)**：所有 `z-[100]` 以上的全螢幕彈窗或獨立頁面，必須在 `useEffect` 中綁定 `document.body.style.overflow = 'hidden'`，並務必實作 cleanup 復原機制。其內部的獨立滾動容器需加上 `overscroll-contain`。
+    * **iOS 邊緣縫隙修復 (Viewport Gap Prevention)**：所有滿版背景遮罩 (Backdrop) 或全螢幕容器，必須嚴格使用 `h-[100dvh]` 與 `fixed inset-0`，徹底廢棄不穩定的 `h-screen` 或 `top-safe`，以防止 iOS 動態島或底部 Home Indicator 造成的漏光斷層。
+
 ---
 
 ## 6. 更新日誌 (Changelog)
