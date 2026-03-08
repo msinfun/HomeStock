@@ -134,6 +134,23 @@ const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
+  const onDeleteCategoryHook = (cat: string) => {
+    onUpdateCategories(categories.filter(c => c !== cat));
+  };
+
+  const onDeleteLocationHook = (loc: string) => {
+    onUpdateLocations(locations.filter(l => l !== loc));
+  };
+
+  const onDeleteRecipeTagHook = (parent: string, child: string) => {
+    if (!child) {
+      const { [parent]: _, ...rest } = recipeTags;
+      onUpdateRecipeTags(rest);
+    } else {
+      onUpdateRecipeTags({ ...recipeTags, [parent]: recipeTags[parent].filter(t => t !== child) });
+    }
+  };
+
   // --- List Manipulations ---
   const handleRenameConfirm = (newName: string) => {
     const val = newName.trim();
