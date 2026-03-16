@@ -44,10 +44,11 @@ const InventoryItemCard: React.FC<{
   onAddToShopping: (name: string, category: string) => void;
   onUpdate: (item: InventoryItem) => void;
   onConsumeRequest: (item: InventoryItem) => void;
+  onShortConsumeRequest: (item: InventoryItem) => void;
   isActiveSwipe?: boolean;
   onSwipeStart?: () => void;
   isTargetItem?: boolean;
-}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, isActiveSwipe, onSwipeStart, isTargetItem }) => {
+}> = ({ item, isExpanded, selectedIds, isBatchMode, viewMode, shoppingList, settings, onToggleExpansion, onToggleSelection, onEdit, onDuplicate, onScrapRequest, onDeleteRequest, onAddToShopping, onUpdate, onConsumeRequest, onShortConsumeRequest, isActiveSwipe, onSwipeStart, isTargetItem }) => {
   const [offsetX, setOffsetX] = useState(0);
   const [swipedOpen, setSwipedOpen] = useState(false);
   const startX = useRef(0);
@@ -119,6 +120,63 @@ const InventoryItemCard: React.FC<{
         {text}
       </span>
     );
+  };
+
+  const consumePressTimer = useRef<any>(null);
+  const consumeIsLongPress = useRef(false);
+  const consumeTouchStartPos = useRef({ x: 0, y: 0 });
+  const consumeIsMoved = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (consumePressTimer.current) clearTimeout(consumePressTimer.current);
+    };
+  }, []);
+
+  const startConsumePress = (e: React.TouchEvent | React.MouseEvent) => {
+    e.stopPropagation();
+    consumeIsLongPress.current = false;
+    consumeIsMoved.current = false;
+    if ('touches' in e && e.touches.length > 0) {
+      consumeTouchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    }
+    if (consumePressTimer.current) clearTimeout(consumePressTimer.current);
+    consumePressTimer.current = setTimeout(() => {
+      if (!consumeIsMoved.current) {
+        consumeIsLongPress.current = true;
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        onConsumeRequest(item);
+      }
+    }, 500);
+  };
+
+  const handleConsumeTouchMove = (e: React.TouchEvent) => {
+    if (consumeIsMoved.current) return;
+    if (e.touches.length > 0) {
+      const moveX = e.touches[0].clientX;
+      const moveY = e.touches[0].clientY;
+      const distance = Math.sqrt(
+        Math.pow(moveX - consumeTouchStartPos.current.x, 2) +
+        Math.pow(moveY - consumeTouchStartPos.current.y, 2)
+      );
+      if (distance > 10) {
+        consumeIsMoved.current = true;
+        if (consumePressTimer.current) {
+          clearTimeout(consumePressTimer.current);
+          consumePressTimer.current = null;
+        }
+      }
+    }
+  };
+
+  const cancelConsumePress = (e?: React.TouchEvent | React.MouseEvent) => {
+    e?.stopPropagation();
+    if (consumePressTimer.current) {
+      clearTimeout(consumePressTimer.current);
+      consumePressTimer.current = null;
+    }
   };
 
   const isInShoppingList = shoppingList.some(s => s.name.trim().toLowerCase() === item.name.trim().toLowerCase());
@@ -316,8 +374,23 @@ const InventoryItemCard: React.FC<{
 
             <div className="flex items-center gap-1">
               <button
-                onClick={(e) => { e.stopPropagation(); onConsumeRequest(item); }}
-                className="p-2.5 text-[#FF3B30] hover:bg-red-50 transition-all rounded-full"
+                onTouchStart={startConsumePress}
+                onTouchEnd={cancelConsumePress}
+                onTouchCancel={cancelConsumePress}
+                onTouchMove={handleConsumeTouchMove}
+                onMouseDown={startConsumePress}
+                onMouseUp={cancelConsumePress}
+                onMouseLeave={cancelConsumePress}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  if (consumeIsLongPress.current || consumeIsMoved.current) return;
+                  if (item.quantity > 0) {
+                    onShortConsumeRequest(item);
+                  }
+                }}
+                className="p-2.5 text-[#FF3B30] hover:bg-red-50 active:scale-95 transition-transform rounded-full select-none"
+                style={{ WebkitTouchCallout: 'none' }}
                 title="消耗"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /></svg>
@@ -633,6 +706,18 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
     });
   };
 
+  const requestShortConsume = (item: InventoryItem) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: '確認消耗',
+      message: `確定要消耗 1 個「${item.name}」嗎？`,
+      onConfirm: () => {
+        handleAdjustQuantity(item, -1);
+        setConfirmConfig(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   const requestScrap = (item: InventoryItem) => {
     setConfirmConfig({
       isOpen: true,
@@ -828,6 +913,7 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
               onAddToShopping={props.onAddToShopping}
               onUpdate={props.onUpdate}
               onConsumeRequest={requestConsume}
+              onShortConsumeRequest={requestShortConsume}
               isActiveSwipe={activeSwipeId === item.id}
               onSwipeStart={() => setActiveSwipeId(item.id)}
               isTargetItem={props.targetInventoryId === item.id}
