@@ -175,9 +175,13 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [defs, transactions, shoppingList, categories, locations, settings, recipes, recipeTags, mealPlans]); // Global Initialization & Watchers
   useEffect(() => {
-    window.scrollTo(0, 0);
-    window.dispatchEvent(new Event('view-changed'));
-  }, [activeView]);
+    if ((activeView === 'inventory' && targetInventoryId) || (activeView === 'recipes' && targetRecipeId)) {
+      window.dispatchEvent(new Event('view-changed'));
+    } else {
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new Event('view-changed'));
+    }
+  }, [activeView]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const items: InventoryItem[] = useMemo(() => {
     const virtualItems: InventoryItem[] = [];
@@ -306,9 +310,13 @@ const App: React.FC = () => {
   };
 
   const handleAddRecipe = (recipe: Recipe) => {
-    if (editingRecipe && editingRecipe.id) setRecipes(prev => prev.map(r => r.id === recipe.id ? recipe : r));
-    else setRecipes(prev => [...prev, { ...recipe, id: generateId() }]);
-    setActiveView('recipes');
+    if (editingRecipe && editingRecipe.id) {
+      setRecipes(prev => prev.map(r => r.id === recipe.id ? recipe : r));
+      handleJumpToRecipe(recipe.id);
+    } else {
+      setRecipes(prev => [...prev, { ...recipe, id: generateId() }]);
+      setActiveView('recipes');
+    }
     setEditingRecipe(null);
   };
 
@@ -497,7 +505,7 @@ const App: React.FC = () => {
           {activeView === 'recipes' && <RecipeView targetRecipeId={targetRecipeId} clearTargetRecipeId={() => setTargetRecipeId(null)} recipes={recipes} inventoryItems={items} shoppingList={shoppingList} recipeTags={recipeTags} onDelete={handleDeleteRecipe} onEdit={(r) => { setEditingRecipe(r); setActiveView('edit-recipe'); }} onDuplicate={(r) => { const { id, ...rest } = r; setEditingRecipe({ ...rest, id: '', name: r.name + ' (副本)' } as Recipe); setActiveView('edit-recipe'); }} onUpdate={handleUpdateRecipeDirectly} onAddToShopping={(name) => setShoppingList(prev => [...prev, { id: generateId(), name, category: '食品', addedDate: new Date().toLocaleDateString() }])} />}
           {activeView === 'meal-planner' && <MealPlannerView recipes={recipes} inventoryItems={items} handleJumpToRecipe={handleJumpToRecipe} mealData={mealPlans} setMealData={setMealPlans} />}
           {activeView === 'add-recipe' && <AddRecipeView onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
-          {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => setActiveView('recipes')} recipeTags={recipeTags} inventoryItems={items} />}
+          {activeView === 'edit-recipe' && editingRecipe && <AddRecipeView initialData={editingRecipe} onSave={handleAddRecipe} onCancel={() => handleJumpToRecipe(editingRecipe.id)} recipeTags={recipeTags} inventoryItems={items} />}
           {activeView === 'shopping' && <ShoppingListView shoppingList={shoppingList} onRemove={handleDeleteShoppingItem} onToggle={(id) => setShoppingList(prev => prev.map(s => s.id === id ? { ...s, isChecked: !s.isChecked } : s))} showAddQuickItem={isAddingQuickShopping} onCloseAddQuickItem={() => setIsAddingQuickShopping(false)} onAddQuickItem={(name, cat) => setShoppingList(prev => [...prev, { id: generateId(), name, category: cat, addedDate: new Date().toLocaleDateString() }])} categories={categories} existingItems={items} />}
           {activeView === 'analysis' && <AnalysisView items={items} transactions={transactions} defs={defs} />}
           {activeView === 'settings' && (
@@ -531,9 +539,21 @@ const App: React.FC = () => {
                     tryRemoveFromShoppingList(item.name);
                   }
                 }
-                if (!stay) setActiveView('inventory');
+                if (!stay) {
+                  if (activeView === 'edit' && editingItem && editingItem.id) {
+                    handleNavigateToInventoryItem(editingItem.id);
+                  } else {
+                    setActiveView('inventory');
+                  }
+                }
               }}
-              onCancel={() => setActiveView('inventory')}
+              onCancel={() => {
+                if (activeView === 'edit' && editingItem && editingItem.id) {
+                  handleNavigateToInventoryItem(editingItem.id);
+                } else {
+                  setActiveView('inventory');
+                }
+              }}
             />
           )}
         </main>
