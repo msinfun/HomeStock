@@ -526,14 +526,14 @@ const InventoryList: React.FC<InventoryListProps> = (props) => {
           el.classList.add('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_20px_rgba(0,122,255,0.3)]', 'transition-all', 'duration-1000');
           setTimeout(() => {
             el.classList.remove('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_20px_rgba(0,122,255,0.3)]');
-            if (props.clearTargetInventoryId) props.clearTargetInventoryId(); // 加入這行確保狀態重置
+            if (props.clearTargetInventoryId) props.clearTargetInventoryId();
           }, 2000);
         }
-      }, 300); // 稍微延長延遲確保卡片已展開渲染
+      }, 250); // 250ms 延遲：確保手機虛擬鍵盤縮回且 DOM 渲染完成
 
       return () => clearTimeout(timer);
     }
-  }, [props.targetInventoryId]);
+  }, [props.targetInventoryId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleItemExpansion = (id: string) => {
     setExpandedItemIds(prev => {

@@ -879,18 +879,18 @@ const RecipeView: React.FC<RecipeViewProps> = ({
 
   useEffect(() => {
     if (targetRecipeId) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         const el = document.getElementById('recipe-' + targetRecipeId);
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          // Optional visual highlight
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
           el.classList.add('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_30px_rgba(0,122,255,0.3)]', 'rounded-[32px]', 'transition-all', 'duration-500');
           setTimeout(() => {
             el.classList.remove('ring-4', 'ring-[#007AFF]', 'shadow-[0_0_30px_rgba(0,122,255,0.3)]');
             if (clearTargetRecipeId) clearTargetRecipeId();
           }, 1500);
         }
-      }, 100);
+      }, 250); // 250ms 延遲：針對手機端鍵盤縮回緩衝
+      return () => clearTimeout(timer);
     }
   }, [targetRecipeId, clearTargetRecipeId]);
 
