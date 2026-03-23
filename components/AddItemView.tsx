@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { InventoryItem } from '../types';
 import { recognizeItemFromImage, recognizeExpiryDate, inferItemDetailsFromText } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
+import { compressImage } from '../utils/imageProcessor';
 
 interface AddItemViewProps {
   onAdd: (item: Omit<InventoryItem, 'id'>, stayOnView?: boolean) => void;
@@ -14,6 +15,7 @@ interface AddItemViewProps {
 
 const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData, categories, locations, existingItems = [] }) => {
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState('準備辨識...');
   const [isExpiryAiLoading, setIsExpiryAiLoading] = useState(false);
   const [isTextAiLoading, setIsTextAiLoading] = useState(false);
 
@@ -26,6 +28,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const expiryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
   const hasInitialized = useRef(false);
   const isMounted = useRef(true); // 🍎 QA-06 防禦：追蹤元件是否卸載
 
@@ -35,6 +38,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       isMounted.current = false;
       if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
       if (expiryTimeoutRef.current) clearTimeout(expiryTimeoutRef.current);
+      loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
+      loadingTimeoutsRef.current = [];
     };
   }, []);
 
@@ -80,15 +85,43 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     const distinctCategories = Array.from(new Set([...categories, ...existingItems.map(i => i.category)]));
     const distinctSubCategories = Array.from(new Set(existingItems.map(i => i.subCategory).filter(Boolean) as string[]));
     const distinctLocations = Array.from(new Set([...locations, ...existingItems.map(i => i.location)]));
-    const historyNames = Array.from(new Set(existingItems.map(i => i.name).filter(Boolean)));
 
     return {
       categories: distinctCategories,
       subCategories: distinctSubCategories,
-      locations: distinctLocations,
-      historyNames
+      locations: distinctLocations
     };
   }, [categories, locations, existingItems]);
+
+  const getFilteredHistory = (currentInput: string): string[] => {
+    // 邏輯 B (近期清單)：挑選最新（id 最大，假設 timestamp 格式可排序）的 20 筆
+    const recentItems = [...existingItems]
+      .sort((a, b) => b.id.localeCompare(a.id))
+      .slice(0, 20);
+
+    let matchedItems: typeof existingItems = [];
+
+    // 邏輯 A (關鍵字匹配)：若輸入長度 > 1，拆解為 2 字元片段進行模糊匹配
+    const input = currentInput.trim();
+    if (input.length > 1) {
+      const fragments: string[] = [];
+      for (let i = 0; i < input.length - 1; i++) {
+        fragments.push(input.substring(i, i + 2));
+      }
+
+      matchedItems = existingItems.filter(item =>
+        fragments.some(fragment => item.name.includes(fragment))
+      );
+    }
+
+    // 合併 A + B 的聯集，去重並限制總量 40 筆
+    const combinedNames = Array.from(new Set([
+      ...recentItems.map(i => i.name),
+      ...matchedItems.map(i => i.name)
+    ]));
+
+    return combinedNames.slice(0, 40);
+  };
 
   useEffect(() => {
     const handleViewChange = () => {
@@ -214,7 +247,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
 
     setIsTextAiLoading(true);
     try {
-      const rawAiResult = await inferItemDetailsFromText(form.name, aiContext);
+      const historyNames = getFilteredHistory(form.name);
+      const rawAiResult = await inferItemDetailsFromText(form.name, { ...aiContext, historyNames });
       if (!isMounted.current) return; // 🍎 QA-06 解除掛載保護
 
       if (rawAiResult) {
@@ -312,19 +346,28 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     }
 
     setIsAiLoading(true);
-    const promises = Array.from(files).map((file: File) => {
-      return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
-    });
+    setLoadingText('📦 正在壓縮圖片...');
+
+    // 動態加載提示輪播
+    const messages = [
+      { delay: 600, text: '🚀 傳送至 AI 伺服器...' },
+      { delay: 1500, text: '🧠 AI 正在分析物品與效期...' },
+      { delay: 2500, text: '🔍 正在與歷史紀錄進行語意比對...' },
+      { delay: 3500, text: '✨ 正在整理最終資料...' }
+    ];
+
+    loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
+    loadingTimeoutsRef.current = messages.map(m => 
+      setTimeout(() => setLoadingText(m.text), m.delay)
+    );
+
+    const promises = Array.from(files).map((file: File) => compressImage(file));
 
     scanTimeoutRef.current = setTimeout(async () => {
       try {
         const base64Images = await Promise.all(promises);
-        const results = await recognizeItemFromImage(base64Images, aiContext);
+        const historyNames = getFilteredHistory(""); // 圖片辨識時無名稱，僅傳送最新 20 筆參考
+        const results = await recognizeItemFromImage(base64Images, { ...aiContext, historyNames });
         if (!isMounted.current) return; // 🍎 QA-06
 
         if (results && results.length > 0) {
@@ -363,6 +406,9 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       } finally {
         if (isMounted.current) {
           setIsAiLoading(false);
+          setLoadingText('準備辨識...'); // 重置文字
+          loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
+          loadingTimeoutsRef.current = [];
           if (fileInputRef.current) fileInputRef.current.value = '';
         }
       }
@@ -374,48 +420,44 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     if (!file) return;
 
     setIsExpiryAiLoading(true);
+    
+    expiryTimeoutRef.current = setTimeout(async () => {
+      try {
+        const base64 = await compressImage(file);
+        const expiry = await recognizeExpiryDate(base64);
+        if (!isMounted.current) return; // 🍎 QA-06
 
-    expiryTimeoutRef.current = setTimeout(() => {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64 = (reader.result as string).split(',')[1];
-          const expiry = await recognizeExpiryDate(base64);
-          if (!isMounted.current) return; // 🍎 QA-06
-
-          if (expiry !== null) {
-            setForm(prev => ({ ...prev, expiryDate: expiry }));
-          } else {
-            setModalConfig({
-              isOpen: true,
-              title: '辨識失敗',
-              message: '無法辨識效期，請手動輸入。',
-              isAlert: true,
-              confirmText: '好',
-              onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
-              onCancel: () => { }
-            });
-          }
-        } catch (err: any) {
-          if (!isMounted.current) return;
-          console.error("Expiry AI failed", err);
+        if (expiry !== null) {
+          setForm(prev => ({ ...prev, expiryDate: expiry }));
+        } else {
           setModalConfig({
             isOpen: true,
             title: '辨識失敗',
-            message: err instanceof Error ? err.message : 'AI 效期分析失敗，請稍後再試。',
+            message: '無法辨識效期，請手動輸入。',
             isAlert: true,
             confirmText: '好',
             onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
             onCancel: () => { }
           });
-        } finally {
-          if (isMounted.current) {
-            setIsExpiryAiLoading(false);
-            if (expiryFileInputRef.current) expiryFileInputRef.current.value = '';
-          }
         }
-      };
-      reader.readAsDataURL(file);
+      } catch (err: any) {
+        if (!isMounted.current) return;
+        console.error("Expiry AI failed", err);
+        setModalConfig({
+          isOpen: true,
+          title: '辨識失敗',
+          message: err instanceof Error ? err.message : 'AI 效期分析失敗，請稍後再試。',
+          isAlert: true,
+          confirmText: '好',
+          onConfirm: () => setModalConfig(prev => ({ ...prev, isOpen: false })),
+          onCancel: () => { }
+        });
+      } finally {
+        if (isMounted.current) {
+          setIsExpiryAiLoading(false);
+          if (expiryFileInputRef.current) expiryFileInputRef.current.value = '';
+        }
+      }
     }, 50);
   };
 
@@ -472,7 +514,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    辨識中...
+                    <span className="animate-pulse">{loadingText}</span>
                   </>
                 ) : (
                   <>

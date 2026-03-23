@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Recipe, RecipeTagStructure, InventoryItem } from '../types';
 import { recognizeRecipeFromImage, recognizeRecipeFromText, inferRecipeTagsFromTitle } from '../geminiService';
 import ConfirmationModal from './ConfirmationModal';
+import { compressImage } from '../utils/imageProcessor';
 
 interface AddRecipeViewProps {
   onSave: (recipe: Recipe) => void;
@@ -113,17 +114,7 @@ const AddRecipeView: React.FC<AddRecipeViewProps> = ({ onSave, onCancel, initial
 
     try {
       const base64Images = await Promise.all(
-        fileArray.map((file: File) => {
-          return new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const base64 = (reader.result as string).split(',')[1];
-              resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-        })
+        fileArray.map((file: File) => compressImage(file))
       );
 
       const result = await recognizeRecipeFromImage(base64Images, availableFlatTags, inventoryItems || []);
