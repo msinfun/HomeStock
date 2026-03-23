@@ -50,19 +50,21 @@ function cleanTags(tags: string[], allowed: string[]): string[] {
   return tags.filter(t => allowedSet.has(t));
 }
 
-const getCommonPromptRules = (categories: string[]) => {
+const getCommonPromptRules = (categories: string[], historyNames: string[] = []) => {
   const catString = categories.length > 0 ? categories.join("', '") : "食品', '雜貨', '藥品', '盥洗用品', '電子產品', '其他";
+  const historyString = historyNames.length > 0 ? historyNames.join(", ") : "";
   return `
   **[嚴格 JSON 輸出模式 - 效能優化]**
   1. 請直接回傳 JSON 格式，不要包含 Markdown 標記 (如 \`\`\`json) 或任何解釋文字。
-  2. **name (名稱)**：保留 brand、系列。
-  3. **subCategory (小分類)**：物品本體名稱。
+  2. **name (名稱)**：必須是 [品牌] + [完整產品名稱] (例如：台糖晶冰糖)，不可只回傳品牌，應具備唯一性與產品種類。
+  3. **subCategory (小分類)**：僅包含產品的「種類屬性」(例如：晶冰糖)，必須是 name 的「子集」或「屬性描述」。
   4. **packageSize (包裝容量/規格)**：從名稱或圖片中提取容量、重量。
   5. **price (單價)**：提取單價數字。如果發票或圖片上僅有「總價」與「數量」，請務必自行計算「總價 ÷ 數量 = 單價」並回傳此單價數字；若無價格則回傳 0。
   6. **expiryDate (有效期限)**：極度仔細尋找包裝上的效期 (EXP, Best Before)。若有找到，統一轉換為 YYYY-MM-DD 格式；若無則回傳空字串。
   7. **category (大分類)**：請務必優先從現有類別 ['${catString}'] 中挑選最適合的。
   8. **防呆機制**：如果圖片模糊或缺少資訊，請進行合理推斷，**絕對不允許回傳 null**。若無法推斷，請填寫預設值 (字串填 "", 數字填 0)。
   9. **單價防呆**：若無法取得 price，請強制回傳 0，不可省略該欄位。
+  10. **【歷史語意匹配】**：這份清單是使用者過去建立的物品名稱：[${historyString}]。請以「語意」判斷你辨識出的物品是否已存在於此清單中（注意：奶油與鮮奶油是不同的東西）。若判定為同一物品（如「麥典時作工坊麵包專用粉」對應清單中的「麥典麵包粉」），請在 matchedHistoryName 欄位 100% 照抄清單中的名稱。若為全新物品，則回傳空字串。
 `;
 };
 
@@ -196,7 +198,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [])}` }] },
+      contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
@@ -205,6 +207,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
             type: Type.OBJECT,
             properties: {
               name: { type: Type.STRING },
+              matchedHistoryName: { type: Type.STRING, description: "若與歷史清單中的物品為同一實體，回傳完全一致的歷史名稱，否則留空。" },
               quantity: { type: Type.NUMBER },
               category: { type: Type.STRING },
               subCategory: { type: Type.STRING },
@@ -214,12 +217,31 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
               price: { type: Type.NUMBER },
               remarks: { type: Type.STRING }
             },
-            required: ["name", "quantity", "category", "subCategory"]
+            required: ["name", "quantity", "category", "subCategory", "matchedHistoryName"]
           }
         }
       }
     });
-    return JSON.parse(response.text || "[]");
+    const parsed = JSON.parse(response.text || "[]");
+    if (Array.isArray(parsed)) {
+      parsed.forEach((aiResult: any) => {
+        if (aiResult.name && aiResult.subCategory && !aiResult.name.includes(aiResult.subCategory) && !aiResult.subCategory.includes(aiResult.name)) {
+          aiResult.name = aiResult.name + aiResult.subCategory;
+        } else if (aiResult.name && aiResult.subCategory && aiResult.subCategory.includes(aiResult.name)) {
+          aiResult.name = aiResult.subCategory; // 如果小分類比名稱更完整(例如綠咖哩醬 > 綠咖哩)，優先使用小分類
+        }
+        
+        // [規格/容量 錯置修復]
+        if (!aiResult.packageSize && aiResult.remarks) {
+          const sizeMatch = aiResult.remarks.match(/(\d+(?:\.\d+)?\s*(?:ml|l|g|kg|oz|lb|入|件|包|瓶|罐|盒|片|粒|顆))/i);
+          if (sizeMatch) {
+            aiResult.packageSize = sizeMatch[0];
+            aiResult.remarks = aiResult.remarks.replace(sizeMatch[0], '').replace(/^[,，\s]+|[,，\s]+$/g, '').trim();
+          }
+        }
+      });
+    }
+    return parsed;
   } catch (error) { throw handleApiError(error); }
 }
 
@@ -228,13 +250,14 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
     const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [])}` }] },
+      contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
             name: { type: Type.STRING },
+            matchedHistoryName: { type: Type.STRING, description: "若與歷史清單中的物品為同一實體，回傳完全一致的歷史名稱，否則留空。" },
             quantity: { type: Type.NUMBER },
             category: { type: Type.STRING },
             subCategory: { type: Type.STRING },
@@ -242,11 +265,26 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
             packageSize: { type: Type.STRING },
             remarks: { type: Type.STRING }
           },
-          required: ["category", "subCategory", "quantity"]
+          required: ["category", "subCategory", "quantity", "matchedHistoryName"]
         }
       }
     });
-    return JSON.parse(response.text || "{}");
+    const parsed = JSON.parse(response.text || "{}");
+    if (parsed.name && parsed.subCategory && !parsed.name.includes(parsed.subCategory) && !parsed.subCategory.includes(parsed.name)) {
+      parsed.name = parsed.name + parsed.subCategory;
+    } else if (parsed.name && parsed.subCategory && parsed.subCategory.includes(parsed.name)) {
+      parsed.name = parsed.subCategory;
+    }
+    
+    // [規格/容量 錯置修復]
+    if (!parsed.packageSize && parsed.remarks) {
+      const sizeMatch = parsed.remarks.match(/(\d+(?:\.\d+)?\s*(?:ml|l|g|kg|oz|lb|入|件|包|瓶|罐|盒|片|粒|顆))/i);
+      if (sizeMatch) {
+        parsed.packageSize = sizeMatch[0];
+        parsed.remarks = parsed.remarks.replace(sizeMatch[0], '').replace(/^[,，\s]+|[,，\s]+$/g, '').trim();
+      }
+    }
+    return parsed;
   } catch (error) { throw handleApiError(error); }
 }
 

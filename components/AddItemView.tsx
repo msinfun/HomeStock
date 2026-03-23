@@ -80,11 +80,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     const distinctCategories = Array.from(new Set([...categories, ...existingItems.map(i => i.category)]));
     const distinctSubCategories = Array.from(new Set(existingItems.map(i => i.subCategory).filter(Boolean) as string[]));
     const distinctLocations = Array.from(new Set([...locations, ...existingItems.map(i => i.location)]));
+    const historyNames = Array.from(new Set(existingItems.map(i => i.name).filter(Boolean)));
 
     return {
       categories: distinctCategories,
       subCategories: distinctSubCategories,
-      locations: distinctLocations
+      locations: distinctLocations,
+      historyNames
     };
   }, [categories, locations, existingItems]);
 
@@ -128,6 +130,27 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const fileInputRef = useRef<HTMLInputElement>(null);
   const expiryFileInputRef = useRef<HTMLInputElement>(null);
 
+  const applyHistoryToItem = (item: any) => {
+    const targetName = (item.matchedHistoryName || item.name || '').trim();
+    if (!targetName) return item;
+
+    const historyMatch = existingItems.find(i => i.name === targetName);
+    if (historyMatch) {
+      return {
+        ...item,
+        name: historyMatch.name, // 強制使用歷史名稱的精確大小寫
+        category: historyMatch.category || item.category,
+        subCategory: historyMatch.subCategory || item.subCategory,
+        location: historyMatch.location || item.location,
+        minThreshold: historyMatch.minThreshold !== undefined ? historyMatch.minThreshold : item.minThreshold,
+        packageSize: historyMatch.packageSize || item.packageSize,
+        price: historyMatch.price || item.price,
+        _historyMatch: true
+      };
+    }
+    return item;
+  };
+
   const predictSubCategory = (name: string) => {
     const historical = existingItems.find(item => item.name.toLowerCase() === name.toLowerCase());
     return historical ? historical.subCategory || '' : '';
@@ -138,22 +161,25 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     return historical ? (locations.includes(historical.location) ? historical.location : '') : '';
   };
 
-  const loadItemIntoForm = (item: any) => {
+  const loadItemIntoForm = (rawItem: any) => {
+    // 歷史紀錄優先：用歷史資料覆蓋 AI 辨識結果
+    const item = applyHistoryToItem(rawItem);
+    
     const finalCategory = categories.includes(item.category) ? item.category : defaultCategory;
-    const finalLocation = locations.includes(item.location) ? item.location : predictLocation(item.name || '');
+    const finalLocation = item._historyMatch && locations.includes(item.location) ? item.location : (locations.includes(item.location) ? item.location : predictLocation(item.name || ''));
 
     setForm({
       name: item.name || '',
       quantity: item.quantity || 1,
       category: finalCategory,
-      subCategory: item.subCategory || predictSubCategory(item.name || '') || '',
+      subCategory: item.subCategory || (!item._historyMatch ? predictSubCategory(item.name || '') : '') || '',
       location: finalLocation,
       expiryDate: item.expiryDate || '',
       openedDate: '',
       remarks: item.remarks || '',
       packageSize: item.packageSize || '',
       price: item.price || 0,
-      minThreshold: 0,
+      minThreshold: item.minThreshold || 0,
       lastUsedDate: '',
       batches: [],
       review: ''
@@ -168,8 +194,8 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
 
   const handleNameBlur = async () => {
     if (!form.name || isEditing || batchQueue.length > 0) return;
-    const normalizedName = form.name.trim().toLowerCase();
-    const historyMatch = existingItems.find(i => i.name.trim().toLowerCase() === normalizedName);
+    const targetName = form.name.trim();
+    const historyMatch = existingItems.find(i => i.name === targetName);
 
     if (historyMatch) {
       setForm(prev => ({
@@ -188,10 +214,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
 
     setIsTextAiLoading(true);
     try {
-      const aiResult = await inferItemDetailsFromText(form.name, aiContext);
+      const rawAiResult = await inferItemDetailsFromText(form.name, aiContext);
       if (!isMounted.current) return; // 🍎 QA-06 解除掛載保護
 
-      if (aiResult) {
+      if (rawAiResult) {
+        // AI 回傳後再次套用歷史優先邏輯（因為 AI 可能改了名稱）
+        const aiResult = applyHistoryToItem({ ...rawAiResult, name: rawAiResult.name || form.name });
+        
         const aiCategory = categories.includes(aiResult.category) ? aiResult.category : form.category;
         const aiLocation = locations.includes(aiResult.location) ? aiResult.location : (form.location || predictLocation(aiResult.name || form.name));
 
@@ -199,11 +228,13 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
           ...prev,
           name: aiResult.name || prev.name,
           quantity: aiResult.quantity || prev.quantity,
-          category: (!hasManuallySetCategory) ? aiCategory : prev.category,
+          category: (!hasManuallySetCategory || aiResult._historyMatch) ? aiCategory : prev.category,
           subCategory: aiResult.subCategory || prev.subCategory,
-          location: (!hasManuallySetLocation) ? aiLocation : prev.location,
+          location: (!hasManuallySetLocation || aiResult._historyMatch) ? aiLocation : prev.location,
           remarks: aiResult.remarks || prev.remarks,
-          packageSize: aiResult.packageSize || prev.packageSize
+          packageSize: aiResult.packageSize || prev.packageSize,
+          price: aiResult.price || prev.price,
+          minThreshold: aiResult.minThreshold !== undefined ? aiResult.minThreshold : prev.minThreshold
         }));
         if (aiResult.category) setHasManuallySetCategory(true);
         if (aiResult.location) setHasManuallySetLocation(true);
