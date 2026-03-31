@@ -11,6 +11,23 @@ function getGeminiClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
+// --- Global Timeout & AI Helper ---
+async function generateContentWithTimeout(requestParams: any, timeoutMs = 20000) {
+  const ai = getGeminiClient();
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      // 動態顯示秒數，誠實反映等待時間
+      reject(new Error(`AI 回應超時 (已等待 ${timeoutMs / 1000} 秒)，請檢查網路狀態或重新嘗試。`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([
+    ai.models.generateContent(requestParams),
+    timeoutPromise
+  ]);
+}
+
 // --- Error Handler ---
 function handleApiError(error: any): Error {
   console.error("Gemini API Error:", error);
@@ -146,7 +163,7 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
       4. Output JSON only. 'source' must be "inventory" or "ai".
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -196,7 +213,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
   try {
     const ai = getGeminiClient();
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
@@ -248,7 +265,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
 export async function inferItemDetailsFromText(itemName: string, context: any) {
   try {
     const ai = getGeminiClient();
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
@@ -291,7 +308,7 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
 export async function recognizeExpiryDate(base64Image: string): Promise<string | null> {
   try {
     const ai = getGeminiClient();
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [{ inlineData: { data: base64Image, mimeType: "image/jpeg" } }, { text: "辨識效期 YYYY-MM-DD。若無則回傳空字串。" }] },
       config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { expiryDate: { type: Type.STRING } } } }
@@ -305,12 +322,12 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
   try {
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
-    const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
+    const inventoryVocabulary = Array.from(new Set(inventoryItems.map(i => i.subCategory).filter(Boolean))).join(', ');
 
     // 將所有傳入的 Base64 圖片轉換為 Gemini 支援的格式
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: {
         parts: [
@@ -341,12 +358,12 @@ export async function recognizeRecipeFromText(text: string, availableTags: strin
   try {
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
-    const inventoryVocabulary = Array.from(new Set(inventoryItems.flatMap(i => [i.name, i.subCategory].filter(Boolean)))).join(', ');
+    const inventoryVocabulary = Array.from(new Set(inventoryItems.map(i => i.subCategory).filter(Boolean))).join(', ');
 
     // 防禦：限制輸入長度並清洗可能的惡意指令
     const safeText = text.slice(0, 3000).replace(/ignore all previous instructions/gi, '');
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: {
         parts: [{
@@ -375,7 +392,7 @@ export async function inferRecipeTagsFromTitle(dishName: string, availableTags: 
     const ai = getGeminiClient();
     const tagList = availableTags.join(', ');
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: {
         parts: [{
@@ -429,7 +446,7 @@ export async function recommendRecipes(inventory: InventoryItem[], recipes: Reci
       食譜庫：${JSON.stringify(availableRecipes)}
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [{ text: prompt }] },
       config: {
@@ -472,7 +489,7 @@ export async function generateMealPlan(userPrompt: string, recipes: Recipe[], ta
       食譜庫：${JSON.stringify(availableRecipes)}
     `;
 
-    const response = await ai.models.generateContent({
+    const response = await generateContentWithTimeout({
       model: "gemini-3.1-flash-lite-preview",
       contents: { parts: [{ text: prompt }] },
       config: {

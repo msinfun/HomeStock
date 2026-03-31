@@ -197,7 +197,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
   const loadItemIntoForm = (rawItem: any) => {
     // 歷史紀錄優先：用歷史資料覆蓋 AI 辨識結果
     const item = applyHistoryToItem(rawItem);
-    
+
     const finalCategory = categories.includes(item.category) ? item.category : defaultCategory;
     const finalLocation = item._historyMatch && locations.includes(item.location) ? item.location : (locations.includes(item.location) ? item.location : predictLocation(item.name || ''));
 
@@ -254,7 +254,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
       if (rawAiResult) {
         // AI 回傳後再次套用歷史優先邏輯（因為 AI 可能改了名稱）
         const aiResult = applyHistoryToItem({ ...rawAiResult, name: rawAiResult.name || form.name });
-        
+
         const aiCategory = categories.includes(aiResult.category) ? aiResult.category : form.category;
         const aiLocation = locations.includes(aiResult.location) ? aiResult.location : (form.location || predictLocation(aiResult.name || form.name));
 
@@ -357,7 +357,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     ];
 
     loadingTimeoutsRef.current.forEach(t => clearTimeout(t));
-    loadingTimeoutsRef.current = messages.map(m => 
+    loadingTimeoutsRef.current = messages.map(m =>
       setTimeout(() => setLoadingText(m.text), m.delay)
     );
 
@@ -420,7 +420,7 @@ const AddItemView: React.FC<AddItemViewProps> = ({ onAdd, onCancel, initialData,
     if (!file) return;
 
     setIsExpiryAiLoading(true);
-    
+
     expiryTimeoutRef.current = setTimeout(async () => {
       try {
         const base64 = await compressImage(file);
