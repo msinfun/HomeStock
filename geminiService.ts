@@ -164,7 +164,7 @@ export async function estimateRecipeCostAndNutrition(recipe: Recipe, inventoryIt
     `;
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
