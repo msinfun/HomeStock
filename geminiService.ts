@@ -214,7 +214,7 @@ export async function recognizeItemFromImage(base64Images: string[], context: an
     const ai = getGeminiClient();
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [...imageParts, { text: `辨識圖片物品清單。若上傳多張照片，請自動交叉比對（例如：將照片A的商品正面與照片B的背面效期合併為同一筆資料）。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
         responseMimeType: "application/json",
@@ -266,7 +266,7 @@ export async function inferItemDetailsFromText(itemName: string, context: any) {
   try {
     const ai = getGeminiClient();
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [{ text: `推斷物品屬性：${itemName}。\n${getCommonPromptRules(context?.categories || [], context?.historyNames || [])}` }] },
       config: {
         responseMimeType: "application/json",
@@ -309,7 +309,7 @@ export async function recognizeExpiryDate(base64Image: string): Promise<string |
   try {
     const ai = getGeminiClient();
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [{ inlineData: { data: base64Image, mimeType: "image/jpeg" } }, { text: "辨識效期 YYYY-MM-DD。若無則回傳空字串。" }] },
       config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { expiryDate: { type: Type.STRING } } } }
     });
@@ -328,7 +328,7 @@ export async function recognizeRecipeFromImage(base64Images: string[], available
     const imageParts = base64Images.map(img => ({ inlineData: { data: img, mimeType: "image/jpeg" } }));
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: {
         parts: [
           ...imageParts,
@@ -364,7 +364,7 @@ export async function recognizeRecipeFromText(text: string, availableTags: strin
     const safeText = text.slice(0, 3000).replace(/ignore all previous instructions/gi, '');
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: {
         parts: [{
           text: `Extract recipe data from: ${safeText}. ${getRecipeStrictPrompt(inventoryVocabulary)}
@@ -393,7 +393,7 @@ export async function inferRecipeTagsFromTitle(dishName: string, availableTags: 
     const tagList = availableTags.join(', ');
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: {
         parts: [{
           text: `
@@ -447,7 +447,7 @@ export async function recommendRecipes(inventory: InventoryItem[], recipes: Reci
     `;
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
@@ -490,7 +490,7 @@ export async function generateMealPlan(userPrompt: string, recipes: Recipe[], ta
     `;
 
     const response = await generateContentWithTimeout({
-      model: "gemini-3.1-flash-lite-preview",
+      model: "gemini-3.1-flash-lite",
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
